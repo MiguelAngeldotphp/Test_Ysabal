@@ -20,17 +20,23 @@ import {
   type BirdSex,
   type Campaign,
   type CampaignStats,
+  type MortalityRecord,
   type Sale,
   type SaleDetail,
+  type WeightRecord,
 } from "@/lib/domain";
 import {
   addMortality,
   addWeight,
   closeCampaign,
   createSale,
+  deleteMortality,
+  deleteWeight,
   finishSale,
   getCampaign,
   type DataSource,
+  updateMortality,
+  updateWeight,
 } from "@/lib/repository";
 import {
   closeCampaignSchema,
@@ -59,6 +65,9 @@ type CampaignDetailScreenProps = {
 };
 
 type Toast = { tone: "success" | "error"; text: string } | null;
+type RecordToDelete =
+  | { kind: "mortalidad"; record: MortalityRecord }
+  | { kind: "peso"; record: WeightRecord };
 
 export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenProps) {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -71,6 +80,9 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [showFinishSale, setShowFinishSale] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [editingMortality, setEditingMortality] = useState<MortalityRecord | null>(null);
+  const [editingWeight, setEditingWeight] = useState<WeightRecord | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<RecordToDelete | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,7 +184,12 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
         {campaign.estado === "activa" ? (
           <>
             <section className="record-pair">
-              <MortalityHistoryCard campaign={campaign} />
+              <MortalityHistoryCard
+                campaign={campaign}
+                canEdit={canEdit}
+                onDelete={(record) => setRecordToDelete({ kind: "mortalidad", record })}
+                onEdit={setEditingMortality}
+              />
               <MortalityForm
                 campaign={campaign}
                 canEdit={canEdit}
@@ -183,7 +200,12 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
               />
             </section>
             <section className="record-pair">
-              <WeightHistoryCard campaign={campaign} />
+              <WeightHistoryCard
+                campaign={campaign}
+                canEdit={canEdit}
+                onDelete={(record) => setRecordToDelete({ kind: "peso", record })}
+                onEdit={setEditingWeight}
+              />
               <WeightForm
                 campaign={campaign}
                 canEdit={canEdit}
@@ -257,6 +279,42 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
         />
       ) : null}
       {selectedSale ? <SaleDetailModal sale={selectedSale} onClose={() => setSelectedSale(null)} /> : null}
+      {editingMortality ? (
+        <EditMortalityModal
+          campaign={campaign}
+          onClose={() => setEditingMortality(null)}
+          onConfirm={async (input) => {
+            await perform(() => updateMortality(editingMortality.id, campaign.id, input), "Registro de mortalidad actualizado.");
+            setEditingMortality(null);
+          }}
+          record={editingMortality}
+        />
+      ) : null}
+      {editingWeight ? (
+        <EditWeightModal
+          campaign={campaign}
+          onClose={() => setEditingWeight(null)}
+          onConfirm={async (input) => {
+            await perform(() => updateWeight(editingWeight.id, campaign.id, input), "Registro de peso actualizado.");
+            setEditingWeight(null);
+          }}
+          record={editingWeight}
+        />
+      ) : null}
+      {recordToDelete ? (
+        <DeleteRecordModal
+          record={recordToDelete}
+          onClose={() => setRecordToDelete(null)}
+          onConfirm={async () => {
+            if (recordToDelete.kind === "mortalidad") {
+              await perform(() => deleteMortality(recordToDelete.record.id, campaign.id), "Registro de mortalidad eliminado.");
+            } else {
+              await perform(() => deleteWeight(recordToDelete.record.id, campaign.id), "Registro de peso eliminado.");
+            }
+            setRecordToDelete(null);
+          }}
+        />
+      ) : null}
     </main>
   );
 }
@@ -316,7 +374,17 @@ function CampaignMetrics({ stats }: { stats: CampaignStats }) {
   );
 }
 
-function MortalityHistoryCard({ campaign }: { campaign: Campaign }) {
+function MortalityHistoryCard({
+  campaign,
+  canEdit = false,
+  onEdit,
+  onDelete,
+}: {
+  campaign: Campaign;
+  canEdit?: boolean;
+  onEdit?: (record: MortalityRecord) => void;
+  onDelete?: (record: MortalityRecord) => void;
+}) {
   return (
     <article className="panel records-card records-history-card">
       <header className="panel-header">
@@ -334,6 +402,12 @@ function MortalityHistoryCard({ campaign }: { campaign: Campaign }) {
                 <strong>{(record.hembrasMuertas + record.machosMuertos).toLocaleString("es-PE")} aves</strong>
                 <span>H {record.hembrasMuertas.toLocaleString("es-PE")} · M {record.machosMuertos.toLocaleString("es-PE")}</span>
               </div>
+              {canEdit && onEdit && onDelete ? (
+                <div className="record-actions">
+                  <button className="table-link" onClick={() => onEdit(record)} type="button">Editar</button>
+                  <button className="table-link danger-link" onClick={() => onDelete(record)} type="button">Eliminar</button>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -398,7 +472,17 @@ function MortalityForm({
   );
 }
 
-function WeightHistoryCard({ campaign }: { campaign: Campaign }) {
+function WeightHistoryCard({
+  campaign,
+  canEdit = false,
+  onEdit,
+  onDelete,
+}: {
+  campaign: Campaign;
+  canEdit?: boolean;
+  onEdit?: (record: WeightRecord) => void;
+  onDelete?: (record: WeightRecord) => void;
+}) {
   return (
     <article className="panel records-card records-history-card">
       <header className="panel-header">
@@ -407,13 +491,19 @@ function WeightHistoryCard({ campaign }: { campaign: Campaign }) {
       {campaign.pesos.length ? (
         <div aria-label="Lista de registros de peso" className="weight-list">
           {campaign.pesos.map((record) => (
-            <div className="weight-list-item" key={record.id}>
+            <div className={`weight-list-item ${canEdit && onEdit && onDelete ? "weight-list-item-editable" : ""}`} key={record.id}>
               <div className="weight-date">
                 <strong>{formatShortDate(record.fechaRegistro)}</strong>
                 <span className="day-pill">Día {daysSince(campaign.fechaInicio, record.fechaRegistro)}</span>
               </div>
               <div className="weight-value"><strong>{formatKg(record.pesoHembrasKg)}</strong><span>Hembras</span></div>
               <div className="weight-value"><strong>{formatKg(record.pesoMachosKg)}</strong><span>Machos</span></div>
+              {canEdit && onEdit && onDelete ? (
+                <div className="weight-actions">
+                  <button className="table-link" onClick={() => onEdit(record)} type="button">Editar</button>
+                  <button className="table-link danger-link" onClick={() => onDelete(record)} type="button">Eliminar</button>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -478,6 +568,142 @@ function WeightForm({
         <button className="button button-primary" disabled={busy || !canEdit} type="submit">{busy ? "Guardando…" : "Guardar registro"}</button>
       </form>
     </article>
+  );
+}
+
+function EditMortalityModal({
+  campaign,
+  record,
+  onClose,
+  onConfirm,
+}: {
+  campaign: Campaign;
+  record: MortalityRecord;
+  onClose: () => void;
+  onConfirm: (input: { hembrasMuertas: number; machosMuertos: number; fechaRegistro: string }) => Promise<void>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const parsed = mortalitySchema.safeParse({
+      hembrasMuertas: form.get("hembrasMuertas"),
+      machosMuertos: form.get("machosMuertos"),
+      fechaRegistro: form.get("fechaRegistro"),
+    });
+    if (!parsed.success) return setError(validationMessage(parsed.error));
+
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm(parsed.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "No se pudo actualizar el registro.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal description="Corrige las bajas registradas. La campaña debe permanecer activa." onClose={onClose} title="Editar mortalidad">
+      <form className="modal-body stack-form" onSubmit={submit}>
+        <div className="two-columns">
+          <label>Hembras muertas<input defaultValue={record.hembrasMuertas} min="0" name="hembrasMuertas" required type="number" /></label>
+          <label>Machos muertos<input defaultValue={record.machosMuertos} min="0" name="machosMuertos" required type="number" /></label>
+        </div>
+        <label>Fecha<input defaultValue={record.fechaRegistro} max={todayISO()} min={campaign.fechaInicio} name="fechaRegistro" required type="date" /></label>
+        {error ? <p className="form-message" role="alert">{error}</p> : null}
+        <div className="form-actions"><button className="button button-secondary" onClick={onClose} type="button">Cancelar</button><button className="button button-primary" disabled={busy} type="submit">{busy ? "Guardando…" : "Guardar cambios"}</button></div>
+      </form>
+    </Modal>
+  );
+}
+
+function EditWeightModal({
+  campaign,
+  record,
+  onClose,
+  onConfirm,
+}: {
+  campaign: Campaign;
+  record: WeightRecord;
+  onClose: () => void;
+  onConfirm: (input: { pesoHembrasKg: number; pesoMachosKg: number; fechaRegistro: string }) => Promise<void>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const parsed = weightSchema.safeParse({
+      pesoHembrasKg: form.get("pesoHembrasKg"),
+      pesoMachosKg: form.get("pesoMachosKg"),
+      fechaRegistro: form.get("fechaRegistro"),
+    });
+    if (!parsed.success) return setError(validationMessage(parsed.error));
+
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm(parsed.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "No se pudo actualizar el registro.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal description="Corrige los pesos promedio registrados. La campaña debe permanecer activa." onClose={onClose} title="Editar peso">
+      <form className="modal-body stack-form" onSubmit={submit}>
+        <div className="two-columns">
+          <label>Peso hembras (kg)<input defaultValue={record.pesoHembrasKg} min="0" name="pesoHembrasKg" required step="0.01" type="number" /></label>
+          <label>Peso machos (kg)<input defaultValue={record.pesoMachosKg} min="0" name="pesoMachosKg" required step="0.01" type="number" /></label>
+        </div>
+        <label>Fecha<input defaultValue={record.fechaRegistro} max={todayISO()} min={campaign.fechaInicio} name="fechaRegistro" required type="date" /></label>
+        {error ? <p className="form-message" role="alert">{error}</p> : null}
+        <div className="form-actions"><button className="button button-secondary" onClick={onClose} type="button">Cancelar</button><button className="button button-primary" disabled={busy} type="submit">{busy ? "Guardando…" : "Guardar cambios"}</button></div>
+      </form>
+    </Modal>
+  );
+}
+
+function DeleteRecordModal({
+  record,
+  onClose,
+  onConfirm,
+}: {
+  record: RecordToDelete;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const label = record.kind === "mortalidad" ? "mortalidad" : "peso";
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "No se pudo eliminar el registro.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal description={`Eliminarás el registro de ${label} del ${formatDate(record.record.fechaRegistro)}. Esta acción no se puede deshacer.`} onClose={onClose} title={`Eliminar registro de ${label}`}>
+      <div className="modal-body stack-form">
+        <p className="delete-warning">Confirma únicamente si este registro se ingresó por error.</p>
+        {error ? <p className="form-message" role="alert">{error}</p> : null}
+        <div className="form-actions"><button className="button button-secondary" disabled={busy} onClick={onClose} type="button">Cancelar</button><button className="button button-danger" disabled={busy} onClick={() => void remove()} type="button">{busy ? "Eliminando…" : "Eliminar registro"}</button></div>
+      </div>
+    </Modal>
   );
 }
 

@@ -102,6 +102,8 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 
 .button-primary { background: var(--green); color: #fff; }
 .button-primary:not(:disabled):hover { background: var(--green-dark); }
+.button-danger { background: var(--red); color: #fff; }
+.button-danger:not(:disabled):hover { background: #96352d; }
 .button-secondary { background: var(--surface); border-color: #cbd9ce; color: var(--green-dark); }
 .button-secondary:not(:disabled):hover { background: var(--green-wash); }
 .button-quiet { background: transparent; color: var(--ink-soft); }
@@ -497,6 +499,8 @@ select:focus {
 .record-summary { text-align: right; }
 .record-summary span { color: var(--ink-soft); font-size: 0.84rem; }
 .mortality-text strong { color: var(--red); }
+.record-actions,
+.weight-actions { display: flex; gap: 0.55rem; white-space: nowrap; }
 
 .record-form { padding: 1.25rem; }
 
@@ -508,6 +512,8 @@ select:focus {
   padding: 1rem 1.25rem;
   border-top: 1px solid #edf1ed;
 }
+
+.weight-list-item-editable { grid-template-columns: minmax(120px, 1.1fr) minmax(100px, 0.85fr) minmax(100px, 0.85fr) auto; }
 
 .weight-list-item:first-child { border-top: 0; }
 .weight-date, .weight-value { display: grid; gap: 0.3rem; }
@@ -631,6 +637,15 @@ select:focus {
 .loss-preview strong { color: #79511d; font-size: 1.02rem; }
 .loss-preview span { color: var(--ink-soft); font-size: 0.9rem; }
 
+.delete-warning {
+  border: 1px solid #edc0bc;
+  border-radius: 0.72rem;
+  padding: 0.82rem;
+  color: #8d302a;
+  background: var(--red-wash);
+  font-size: 0.92rem;
+}
+
 .receipt-totals {
   display: flex;
   flex-wrap: wrap;
@@ -718,6 +733,8 @@ select:focus {
   .weight-list-item { grid-template-columns: 1fr 1fr; }
   .weight-date { grid-column: 1 / -1; }
   .weight-value { padding-top: 0.6rem; border-top: 1px solid #edf1ed; }
+  .weight-list-item-editable { grid-template-columns: 1fr 1fr; }
+  .weight-actions { grid-column: 1 / -1; padding-top: 0.6rem; border-top: 1px solid #edf1ed; }
   .final-loss { align-items: flex-start; flex-direction: column; }
   .form-actions, .group-form-actions { justify-content: stretch; }
   .form-actions .button, .group-form-actions .button { flex: 1; }

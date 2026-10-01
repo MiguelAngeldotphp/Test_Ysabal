@@ -306,6 +306,44 @@ export async function addMortality(campaignId: string, input: MortalityInput): P
   if (error) throw new AppError(databaseMessage(error), 500);
 }
 
+export async function updateMortality(recordId: string, campaignId: string, input: MortalityInput): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado !== "activa") throw new AppError("La mortalidad solo se edita en campañas activas.");
+
+  const client = configuredClient();
+  const { data, error } = await client
+    .from("registros_mortalidad")
+    .update({
+      fecha_registro: input.fechaRegistro,
+      hembras_muertas: input.hembrasMuertas,
+      machos_muertos: input.machosMuertos,
+    })
+    .eq("id", recordId)
+    .eq("campana_id", campaignId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new AppError(databaseMessage(error), 500);
+  if (!data) throw new AppError("No encontramos el registro de mortalidad.", 404);
+}
+
+export async function deleteMortality(recordId: string, campaignId: string): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado !== "activa") throw new AppError("La mortalidad solo se elimina en campañas activas.");
+
+  const client = configuredClient();
+  const { data, error } = await client
+    .from("registros_mortalidad")
+    .delete()
+    .eq("id", recordId)
+    .eq("campana_id", campaignId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new AppError(databaseMessage(error), 500);
+  if (!data) throw new AppError("No encontramos el registro de mortalidad.", 404);
+}
+
 export async function addWeight(campaignId: string, input: WeightInput): Promise<void> {
   const campaign = await getLiveCampaign(campaignId);
   if (campaign.estado !== "activa") throw new AppError("El peso solo se registra en campañas activas.");
@@ -318,6 +356,44 @@ export async function addWeight(campaignId: string, input: WeightInput): Promise
     peso_machos_kg: input.pesoMachosKg,
   });
   if (error) throw new AppError(databaseMessage(error), 500);
+}
+
+export async function updateWeight(recordId: string, campaignId: string, input: WeightInput): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado !== "activa") throw new AppError("El peso solo se edita en campañas activas.");
+
+  const client = configuredClient();
+  const { data, error } = await client
+    .from("registros_peso")
+    .update({
+      fecha_registro: input.fechaRegistro,
+      peso_hembras_kg: input.pesoHembrasKg,
+      peso_machos_kg: input.pesoMachosKg,
+    })
+    .eq("id", recordId)
+    .eq("campana_id", campaignId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new AppError(databaseMessage(error), 500);
+  if (!data) throw new AppError("No encontramos el registro de peso.", 404);
+}
+
+export async function deleteWeight(recordId: string, campaignId: string): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado !== "activa") throw new AppError("El peso solo se elimina en campañas activas.");
+
+  const client = configuredClient();
+  const { data, error } = await client
+    .from("registros_peso")
+    .delete()
+    .eq("id", recordId)
+    .eq("campana_id", campaignId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new AppError(databaseMessage(error), 500);
+  if (!data) throw new AppError("No encontramos el registro de peso.", 404);
 }
 
 export async function closeCampaign(campaignId: string, fechaFin: string): Promise<void> {

@@ -29,6 +29,7 @@ En el SQL Editor ejecuta los scripts en este orden:
    (si todavía no ejecutaste el esquema inicial).
 2. `migrations/20260928_seguridad_usuarios.sql`
 3. `migrations/20260928_endurecer_reglas_campanas.sql`
+4. `migrations/20261001_edicion_registros.sql`
 
 Los dos últimos añaden acceso por usuario mediante Supabase Auth, políticas
 RLS y validaciones para inventario, fechas, cierres y ventas. Después crea una
