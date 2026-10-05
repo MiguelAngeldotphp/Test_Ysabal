@@ -160,6 +160,7 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
                     <th>Aves actuales</th>
                     <th>Mortalidad</th>
                     <th>Inicio</th>
+                    <th>Día de campaña</th>
                     <th aria-label="Acciones" />
                   </tr>
                 </thead>
@@ -182,6 +183,9 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
                           <span className="cell-detail">{stats.mortalidadTotal.toLocaleString("es-PE")} aves</span>
                         </td>
                         <td>{formatDate(campaign.fechaInicio)}</td>
+                        <td>
+                          <strong>Día {stats.diasCrianza.toLocaleString("es-PE")}</strong>
+                        </td>
                         <td className="action-cell">
                           <Link className="table-link" href={`/campanas/${campaign.id}`}>Ver detalle</Link>
                         </td>
