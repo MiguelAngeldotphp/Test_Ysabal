@@ -132,6 +132,29 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 
 .campaigns-panel { min-height: 370px; }
 
+.market-price-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid #cfe2d4;
+  border-radius: 1.1rem;
+  background: var(--green-wash);
+}
+
+.market-price-card h2 { margin-top: 0.2rem; font-size: 1.1rem; }
+
+.market-price-value { text-align: right; }
+.market-price-value strong { display: block; color: var(--green-dark); font-size: 1.55rem; line-height: 1; }
+.market-price-value span,
+.market-price-empty { margin-top: 0.32rem; color: var(--ink-soft); font-size: 0.84rem; }
+
+.market-price-empty { text-align: right; }
+.market-price-button { flex: 0 0 auto; }
+.market-price-message { margin: -0.65rem 0 1rem; color: var(--ink-soft); font-size: 0.84rem; }
+
 .table-wrap { width: 100%; overflow-x: auto; }
 
 .data-table {
@@ -726,6 +749,9 @@ select:focus {
 }
 
 @media (max-width: 520px) {
+  .market-price-card { align-items: flex-start; flex-direction: column; }
+  .market-price-value, .market-price-empty { text-align: left; }
+  .market-price-button { width: 100%; }
   .metric-grid { grid-template-columns: 1fr; }
   .two-columns { grid-template-columns: 1fr; }
   .record-list-item { align-items: flex-start; flex-direction: column; }

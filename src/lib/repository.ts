@@ -25,6 +25,11 @@ export type LoadResult<T> = {
   message?: string;
 };
 
+export type WholesaleChickenPrice = {
+  fechaBoletin: string;
+  precioPorKg: number;
+};
+
 export class AppError extends Error {
   constructor(message: string, public status = 400) {
     super(message);
@@ -89,6 +94,13 @@ function mapSale(row: Row): Sale {
     totalBruto: asNumber(row.total_bruto),
     totalNeto: asNumber(row.total_neto),
     detalles: asRows(row.detalles_venta_javas).map(mapSaleDetail),
+  };
+}
+
+function mapWholesaleChickenPrice(row: Row): WholesaleChickenPrice {
+  return {
+    fechaBoletin: String(row.fecha_boletin),
+    precioPorKg: asNumber(row.precio_por_kg),
   };
 }
 
@@ -170,6 +182,25 @@ export async function getSession(): Promise<Session | null> {
   return data.session;
 }
 
+export async function refreshWholesaleChickenPrice(): Promise<WholesaleChickenPrice> {
+  const session = await getSession();
+  if (!session) throw new AppError("Inicia sesión para actualizar el precio.", 401);
+
+  const response = await fetch("/api/precio-pollo/actualizar", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  const payload = await response.json() as { error?: unknown; fechaBoletin?: unknown; precioPorKg?: unknown };
+  if (!response.ok || !payload.fechaBoletin || payload.precioPorKg === undefined) {
+    throw new AppError(String(payload.error ?? "No se pudo actualizar el precio."), response.status);
+  }
+
+  return {
+    fechaBoletin: String(payload.fechaBoletin),
+    precioPorKg: asNumber(payload.precioPorKg),
+  };
+}
+
 export function onAuthChange(callback: (session: Session | null) => void): () => void {
   const client = getSupabaseBrowser();
   if (!client) return () => undefined;
@@ -201,20 +232,21 @@ export async function signOut(): Promise<void> {
   if (error) throw new AppError(error.message);
 }
 
-export async function getDashboard(): Promise<LoadResult<{ campaigns: Campaign[]; galpones: Galpon[] }>> {
+export async function getDashboard(): Promise<LoadResult<{ campaigns: Campaign[]; galpones: Galpon[]; wholesaleChickenPrice: WholesaleChickenPrice | null }>> {
   const client = getSupabaseBrowser();
   if (!client) {
-    return { data: { campaigns: demoCampaigns, galpones: demoGalpones }, source: "demo" };
+    return { data: { campaigns: demoCampaigns, galpones: demoGalpones, wholesaleChickenPrice: null }, source: "demo" };
   }
 
-  const [campaignResponse, galponResponse] = await Promise.all([
+  const [campaignResponse, galponResponse, priceResponse] = await Promise.all([
     client.from("campanas").select(CAMPAIGN_SELECT).order("fecha_inicio", { ascending: false }),
     client.from("galpones").select("id, nombre, direccion").order("nombre"),
+    client.from("precios_pollo_mayorista").select("fecha_boletin, precio_por_kg").order("fecha_boletin", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   if (campaignResponse.error || galponResponse.error) {
     return {
-      data: { campaigns: demoCampaigns, galpones: demoGalpones },
+      data: { campaigns: demoCampaigns, galpones: demoGalpones, wholesaleChickenPrice: null },
       source: "error",
       message: databaseMessage(campaignResponse.error ?? galponResponse.error),
     };
@@ -224,6 +256,7 @@ export async function getDashboard(): Promise<LoadResult<{ campaigns: Campaign[]
     data: {
       campaigns: (campaignResponse.data as Row[]).map(mapCampaign),
       galpones: (galponResponse.data as Row[]).map(mapGalpon),
+      wholesaleChickenPrice: priceResponse.data ? mapWholesaleChickenPrice(priceResponse.data as Row) : null,
     },
     source: "live",
   };

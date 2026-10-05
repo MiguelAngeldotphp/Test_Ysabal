@@ -15,8 +15,10 @@ import {
   createCampaign,
   createGalpon,
   getDashboard,
+  refreshWholesaleChickenPrice,
   signOut,
   type DataSource,
+  type WholesaleChickenPrice,
 } from "@/lib/repository";
 import { campaignSchema, galponSchema, validationMessage } from "@/lib/validation";
 
@@ -29,6 +31,9 @@ type DialogName = "campaign" | "galpon" | null;
 export function DashboardScreen({ mode }: DashboardScreenProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [galpones, setGalpones] = useState<Galpon[]>([]);
+  const [wholesaleChickenPrice, setWholesaleChickenPrice] = useState<WholesaleChickenPrice | null>(null);
+  const [priceMessage, setPriceMessage] = useState<string | null>(null);
+  const [refreshingPrice, setRefreshingPrice] = useState(false);
   const [source, setSource] = useState<DataSource>(mode);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +46,7 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
     const result = await getDashboard();
     setCampaigns(result.data.campaigns);
     setGalpones(result.data.galpones);
+    setWholesaleChickenPrice(result.data.wholesaleChickenPrice);
     setSource(result.source);
     setNotice(result.message ?? null);
     setLoading(false);
@@ -51,6 +57,20 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
   }, [load]);
 
   const canEdit = mode === "live" && source === "live";
+
+  async function handlePriceRefresh() {
+    setRefreshingPrice(true);
+    setPriceMessage(null);
+    try {
+      const updatedPrice = await refreshWholesaleChickenPrice();
+      setWholesaleChickenPrice(updatedPrice);
+      setPriceMessage(`Precio actualizado con el boletín del ${formatDate(updatedPrice.fechaBoletin)}.`);
+    } catch (error) {
+      setPriceMessage(error instanceof Error ? error.message : "No se pudo verificar el último boletín.");
+    } finally {
+      setRefreshingPrice(false);
+    }
+  }
 
   function openDialog(name: Exclude<DialogName, null>) {
     setFormError(null);
@@ -139,6 +159,25 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
             <strong>No pudimos leer tu base de datos.</strong> {notice ?? "Revisa que las migraciones estén ejecutadas."}
           </section>
         ) : null}
+
+        <section className="market-price-card" aria-label="Precio mayorista de pollo">
+          <div>
+            <p className="eyebrow">Referencia de mercado</p>
+            <h2>Pollo al por mayor</h2>
+          </div>
+          {wholesaleChickenPrice ? (
+            <div className="market-price-value">
+              <strong>S/ {wholesaleChickenPrice.precioPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              <span>por kg · {formatDate(wholesaleChickenPrice.fechaBoletin)}</span>
+            </div>
+          ) : (
+            <p className="market-price-empty">Aún no hay un precio actualizado.</p>
+          )}
+          <button className="button button-secondary market-price-button" disabled={!canEdit || refreshingPrice} onClick={() => void handlePriceRefresh()} type="button">
+            {refreshingPrice ? "Verificando…" : "Verificar último boletín"}
+          </button>
+        </section>
+        {priceMessage ? <p className="market-price-message" role="status">{priceMessage}</p> : null}
 
         <section className="panel campaigns-panel">
           <div className="panel-header">
