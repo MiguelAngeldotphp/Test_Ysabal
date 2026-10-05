@@ -21,6 +21,20 @@ pesos y ventas de aves. Está preparada para Next.js, Supabase y Vercel.
 Mientras no existan esas variables, la aplicación se abre en modo demostración
 con datos ficticios, sin modificar Supabase.
 
+## Actualización diaria del precio mayorista de pollo
+
+El proyecto incluye una tarea diaria de Vercel que consulta el boletín de aves
+de MIDAGRI y registra el precio del pollo en pie por kilogramo. Antes de
+publicar esta función:
+
+1. Ejecuta `migrations/20261004_precios_pollo_mayorista.sql` en el SQL Editor de Supabase.
+2. En Vercel configura `SUPABASE_SERVICE_ROLE_KEY` y `CRON_SECRET` como variables de entorno de Production. Son valores privados del servidor: nunca uses el prefijo `NEXT_PUBLIC_`.
+3. Despliega el proyecto. Vercel invocará `/api/cron/actualizar-precio-pollo` todos los días a las 19:00 UTC (2:00 p. m. en Perú).
+
+Para una primera comprobación, configura temporalmente `MIDAGRI_BOLETIN_URL`
+con la URL directa de un PDF oficial. La tarea guarda el precio únicamente si
+puede identificar tanto la fecha como el valor dentro del boletín.
+
 ## Preparar Supabase
 
 En el SQL Editor ejecuta los scripts en este orden:

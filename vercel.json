@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/actualizar-precio-pollo",
+      "schedule": "0 19 * * *"
+    }
+  ]
+}
