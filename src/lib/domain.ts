@@ -138,6 +138,7 @@ export function saleNetKg(detail: SaleDetail): number {
 }
 
 export function calculateCampaignStats(campaign: Campaign): CampaignStats {
+  const fechaReferencia = campaign.estado === "activa" ? todayISO() : campaign.fechaFin ?? todayISO();
   const hembrasMuertas = campaign.mortalidad.reduce((sum, item) => sum + item.hembrasMuertas, 0);
   const machosMuertos = campaign.mortalidad.reduce((sum, item) => sum + item.machosMuertos, 0);
   const hembrasVendidas = campaign.ventas.flatMap((venta) => venta.detalles)
@@ -166,7 +167,7 @@ export function calculateCampaignStats(campaign: Campaign): CampaignStats {
     machosVendidos,
     avesVendidas: hembrasVendidas + machosVendidos,
     javasVendidas,
-    diasCrianza: daysSince(campaign.fechaInicio, campaign.fechaFin ?? todayISO()),
+    diasCrianza: daysSince(campaign.fechaInicio, fechaReferencia),
     perdidasFinales: campaign.perdidaHembras + campaign.perdidaMachos,
   };
 }
