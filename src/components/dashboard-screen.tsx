@@ -200,11 +200,11 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
           <div className="market-price-values">
             <div className="market-price-value">
               <strong>{wholesaleChickenPrice ? `S/ ${wholesaleChickenPrice.precioPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</strong>
-              <span>Mayorista por kg</span>
+              <span>Mayorista</span>
             </div>
             <div className="market-price-value">
               <strong>{wholesaleChickenPrice?.precioGranjaPorKg === null || !wholesaleChickenPrice ? "—" : `S/ ${wholesaleChickenPrice.precioGranjaPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
-              <span>{wholesaleChickenPrice?.precioGranjaPorKg === null ? "Granja pendiente de actualización" : "Granja por kg"}</span>
+              <span>{wholesaleChickenPrice?.precioGranjaPorKg === null ? "Granja pendiente" : "Granja"}</span>
             </div>
           </div>
           <div className="market-price-actions">

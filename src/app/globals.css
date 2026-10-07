@@ -150,10 +150,10 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 .market-price-bulletin { color: var(--ink-soft); font-size: 0.8rem; font-weight: 680; }
 .market-price-card h2 { margin-top: 0.1rem; font-size: 1.1rem; }
 
-.market-price-value { text-align: right; }
+.market-price-value { text-align: center; }
 .market-price-value strong { display: block; color: var(--green-dark); font-size: 1.55rem; line-height: 1; }
 .market-price-value span,
-.market-price-empty { margin-top: 0.32rem; color: var(--ink-soft); font-size: 0.84rem; }
+.market-price-empty { margin-top: 0.36rem; color: var(--ink-soft); font-size: 0.96rem; font-weight: 680; }
 
 .market-price-values { display: grid; grid-template-columns: repeat(2, minmax(105px, 1fr)); gap: 0.35rem 1.1rem; }
 .market-price-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
