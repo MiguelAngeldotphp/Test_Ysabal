@@ -224,14 +224,12 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
           </section>
         )}
 
-        {campaign.estado !== "activa" ? (
-          <SalesSection
-            campaign={campaign}
-            canEdit={canEdit}
-            onDetail={setSelectedSale}
-            onNewSale={() => setShowSaleForm(true)}
-          />
-        ) : null}
+        <SalesSection
+          campaign={campaign}
+          canEdit={canEdit}
+          onDetail={setSelectedSale}
+          onNewSale={() => setShowSaleForm(true)}
+        />
 
         {campaign.estado === "finalizada" ? (
           <section className="final-loss panel">
@@ -252,7 +250,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
           campaign={campaign}
           onClose={() => setShowCloseCampaign(false)}
           onConfirm={async (date) => {
-            await perform(() => closeCampaign(campaign.id, date), "La campaña terminó y ya puedes registrar ventas.");
+            await perform(() => closeCampaign(campaign.id, date), "La campaña terminó y continúa en venta.");
             setShowCloseCampaign(false);
           }}
         />
@@ -333,7 +331,12 @@ function CampaignActions({
   onFinishSale: () => void;
 }) {
   if (campaign.estado === "activa") {
-    return <button className="button button-primary" disabled={!canEdit} onClick={onCloseCampaign} type="button">Terminar campaña</button>;
+    return (
+      <div className="heading-actions">
+        <button className="button button-secondary" disabled={!canEdit} onClick={onNewSale} type="button">Registrar venta</button>
+        <button className="button button-primary" disabled={!canEdit} onClick={onCloseCampaign} type="button">Terminar campaña</button>
+      </div>
+    );
   }
   if (campaign.estado === "en_venta") {
     return (
@@ -722,7 +725,7 @@ function SalesSection({
     <section className="panel sales-panel">
       <header className="panel-header">
         <div><h2>Ventas</h2><p>Cabeceras de las ventas registradas para esta campaña.</p></div>
-        {campaign.estado === "en_venta" ? <button className="button button-primary" disabled={!canEdit} onClick={onNewSale} type="button">+ Registrar venta</button> : null}
+        {campaign.estado !== "finalizada" ? <button className="button button-primary" disabled={!canEdit} onClick={onNewSale} type="button">+ Registrar venta</button> : null}
       </header>
       {campaign.ventas.length ? (
         <div className="table-wrap">
@@ -787,7 +790,7 @@ function CloseCampaignModal({
     try { await onConfirm(parsed.data.fechaFin); } catch (caught) { setError(caught instanceof Error ? caught.message : "No se pudo terminar."); } finally { setBusy(false); }
   }
   return (
-    <Modal description="Al terminarla se bloquean los registros de peso y mortalidad y se habilitan las ventas." onClose={onClose} title="Terminar campaña">
+    <Modal description="Al terminarla se bloquean los registros de peso y mortalidad; las ventas pueden registrarse desde el inicio." onClose={onClose} title="Terminar campaña">
       <form className="modal-body stack-form" onSubmit={submit}>
         <label>Fecha de término<input defaultValue={todayISO()} max={todayISO()} min={campaign.fechaInicio} name="fechaFin" required type="date" /></label>
         {error ? <p className="form-message" role="alert">{error}</p> : null}

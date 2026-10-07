@@ -463,7 +463,7 @@ export async function closeCampaign(campaignId: string, fechaFin: string): Promi
 
 export async function createSale(campaignId: string, input: SaleInput): Promise<void> {
   const campaign = await getLiveCampaign(campaignId);
-  if (campaign.estado !== "en_venta") throw new AppError("Primero debes terminar la campaña para registrar ventas.");
+  if (campaign.estado === "finalizada") throw new AppError("No se pueden registrar ventas en una campaña finalizada.");
   const stats = calculateCampaignStats(campaign);
   const newFemaleBirds = input.detalles
     .filter((detail) => detail.sexo === "hembra")
