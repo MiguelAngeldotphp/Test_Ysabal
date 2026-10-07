@@ -436,13 +436,9 @@ function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
   const plotWidth = chartWidth - left - right;
   const plotHeight = chartHeight - top - bottom;
   const groupWidth = plotWidth / prices.length;
-  const barWidth = Math.max(8, Math.min(18, (groupWidth - 8) / 2));
+  const barWidth = Math.max(10, Math.min(22, (groupWidth - 10) / 2));
   const groupCenter = (index: number) => left + groupWidth * index + groupWidth / 2;
   const y = (value: number) => top + (max - value) / (max - min) * plotHeight;
-  const pathFor = (series: Array<number | null>) => series.reduce<string>((path, value, index) => {
-    if (value === null) return path;
-    return `${path}${path && series[index - 1] !== null ? " L" : " M"}${groupCenter(index)} ${y(value)}`;
-  }, "");
   const labels = [0, 0.5, 1].map((position) => min + (max - min) * position);
   const baseline = y(0);
 
@@ -469,14 +465,6 @@ function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
             </g>
           );
         })}
-        <path className="price-chart-trend price-chart-trend-majorista" d={pathFor(prices.map((price) => price.precioPorKg))} />
-        <path className="price-chart-trend price-chart-trend-granja" d={pathFor(prices.map((price) => price.precioGranjaPorKg))} />
-        {prices.map((price, index) => (
-          <g key={`${price.fechaBoletin}-points`}>
-            <circle className="price-chart-trend-point price-chart-trend-majorista" cx={groupCenter(index)} cy={y(price.precioPorKg)} r="3.5" />
-            {price.precioGranjaPorKg !== null ? <circle className="price-chart-trend-point price-chart-trend-granja" cx={groupCenter(index)} cy={y(price.precioGranjaPorKg)} r="3.5" /> : null}
-          </g>
-        ))}
       </svg>
     </div>
   );
