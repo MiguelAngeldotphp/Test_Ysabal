@@ -192,9 +192,10 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
         ) : null}
 
         <section className="market-price-card" aria-label="Precio mayorista de pollo">
-          <div>
+          <div className="market-price-heading">
+            <span className="market-price-bulletin">{wholesaleChickenPrice ? `Boletín: ${formatBulletinDate(wholesaleChickenPrice.fechaBoletin)}` : "Boletín pendiente"}</span>
             <p className="eyebrow">Referencia de mercado</p>
-            <h2>Pollo al por mayor</h2>
+            <h2>Precios x Kg.</h2>
           </div>
           <div className="market-price-values">
             <div className="market-price-value">
@@ -205,7 +206,6 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
               <strong>{wholesaleChickenPrice?.precioGranjaPorKg === null || !wholesaleChickenPrice ? "—" : `S/ ${wholesaleChickenPrice.precioGranjaPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
               <span>{wholesaleChickenPrice?.precioGranjaPorKg === null ? "Granja pendiente de actualización" : "Granja por kg"}</span>
             </div>
-            <span className="market-price-date">{wholesaleChickenPrice ? `Boletín: ${formatDate(wholesaleChickenPrice.fechaBoletin)}` : "Aún no hay un boletín registrado"}</span>
           </div>
           <div className="market-price-actions">
             <button className="button button-secondary market-price-button" disabled={source !== "live"} onClick={openPriceHistory} type="button">
@@ -421,6 +421,12 @@ function dateInputValue(date: Date): string {
   return local.toISOString().slice(0, 10);
 }
 
+function formatBulletinDate(value: string): string {
+  const [year, month, day] = value.split("-").map(Number);
+  const monthName = new Intl.DateTimeFormat("es-PE", { month: "long" }).format(new Date(year, month - 1, 1));
+  return `${String(day).padStart(2, "0")} ${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`;
+}
+
 function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
   const left = 58;
   const right = 24;
@@ -456,10 +462,10 @@ function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
           return (
             <g key={price.fechaBoletin}>
               <rect className="price-chart-bar price-chart-bar-majorista" height={baseline - majoristaY} rx="2" width={barWidth} x={majoristaX} y={majoristaY} />
-              <text className="price-chart-bar-value" dominantBaseline="middle" textAnchor="middle" transform={`translate(${majoristaX + barWidth / 2} ${majoristaY + (baseline - majoristaY) / 2}) rotate(-90)`}>S/ {price.precioPorKg.toFixed(2)}</text>
+              <text className="price-chart-bar-value" dominantBaseline="middle" textAnchor="middle" transform={`translate(${majoristaX + barWidth / 2} ${majoristaY + (baseline - majoristaY) / 2}) rotate(-90)`}>{price.precioPorKg.toFixed(2)}</text>
               {granjaPrice !== null ? <>
                 <rect className="price-chart-bar price-chart-bar-granja" height={baseline - y(granjaPrice)} rx="2" width={barWidth} x={granjaX} y={y(granjaPrice)} />
-                <text className="price-chart-bar-value" dominantBaseline="middle" textAnchor="middle" transform={`translate(${granjaX + barWidth / 2} ${y(granjaPrice) + (baseline - y(granjaPrice)) / 2}) rotate(-90)`}>S/ {granjaPrice.toFixed(2)}</text>
+                <text className="price-chart-bar-value" dominantBaseline="middle" textAnchor="middle" transform={`translate(${granjaX + barWidth / 2} ${y(granjaPrice) + (baseline - y(granjaPrice)) / 2}) rotate(-90)`}>{granjaPrice.toFixed(2)}</text>
               </> : null}
               <text className="price-chart-date" textAnchor="end" transform={`translate(${center + 8} ${chartHeight - 18}) rotate(-48)`}>{shortChartDate(price.fechaBoletin)}</text>
             </g>
