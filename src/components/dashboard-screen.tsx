@@ -422,36 +422,49 @@ function dateInputValue(date: Date): string {
 }
 
 function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
-  const chartWidth = 720;
-  const chartHeight = 310;
   const left = 58;
   const right = 24;
+  const chartWidth = Math.max(720, prices.length * 58 + left + right);
+  const chartHeight = 330;
   const top = 22;
-  const bottom = 54;
+  const bottom = 76;
   const values = prices.flatMap((price) => [price.precioPorKg, price.precioGranjaPorKg].filter((value): value is number => value !== null));
-  const low = Math.min(...values);
   const high = Math.max(...values);
-  const padding = Math.max((high - low) * 0.15, 0.2);
-  const min = Math.max(0, low - padding);
+  const padding = Math.max(high * 0.12, 0.3);
+  const min = 0;
   const max = high + padding;
   const plotWidth = chartWidth - left - right;
   const plotHeight = chartHeight - top - bottom;
-  const x = (index: number) => prices.length === 1 ? left + plotWidth / 2 : left + index / (prices.length - 1) * plotWidth;
+  const groupWidth = plotWidth / prices.length;
+  const barWidth = Math.max(8, Math.min(18, (groupWidth - 8) / 2));
+  const groupCenter = (index: number) => left + groupWidth * index + groupWidth / 2;
   const y = (value: number) => top + (max - value) / (max - min) * plotHeight;
-  const pathFor = (valuesForSeries: Array<number | null>) => valuesForSeries.reduce<string>((path, value, index) => value === null ? path : `${path}${path && valuesForSeries[index - 1] !== null ? " L" : " M"}${x(index)} ${y(value)}`, "");
   const labels = [0, 0.5, 1].map((position) => min + (max - min) * position);
-  const labelIndexes = [...new Set([0, Math.floor((prices.length - 1) / 2), prices.length - 1])];
+  const baseline = y(0);
 
   return (
     <div className="price-chart-wrap">
       <div className="price-chart-legend"><span><i className="price-line-majorista" />Mayorista</span><span><i className="price-line-granja" />Granja</span></div>
       <svg aria-label="Gráfico de evolución de precios por kilogramo" className="price-chart" role="img" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
         {labels.map((value) => <g key={value}><line className="price-chart-grid" x1={left} x2={chartWidth - right} y1={y(value)} y2={y(value)} /><text className="price-chart-axis" textAnchor="end" x={left - 10} y={y(value) + 4}>S/ {value.toFixed(2)}</text></g>)}
-        <path className="price-chart-line price-chart-majorista" d={pathFor(prices.map((price) => price.precioPorKg))} />
-        <path className="price-chart-line price-chart-granja" d={pathFor(prices.map((price) => price.precioGranjaPorKg))} />
-        {prices.map((price, index) => <g key={price.fechaBoletin}><circle className="price-chart-point price-chart-majorista" cx={x(index)} cy={y(price.precioPorKg)} r="4" />{price.precioGranjaPorKg !== null ? <circle className="price-chart-point price-chart-granja" cx={x(index)} cy={y(price.precioGranjaPorKg)} r="4" /> : null}</g>)}
-        {labelIndexes.map((index) => <text className="price-chart-axis" key={index} textAnchor="middle" x={x(index)} y={chartHeight - 18}>{formatDate(prices[index].fechaBoletin)}</text>)}
+        {prices.map((price, index) => {
+          const center = groupCenter(index);
+          const majoristaY = y(price.precioPorKg);
+          const granjaY = price.precioGranjaPorKg === null ? null : y(price.precioGranjaPorKg);
+          return (
+            <g key={price.fechaBoletin}>
+              <rect className="price-chart-bar price-chart-bar-majorista" height={baseline - majoristaY} rx="2" width={barWidth} x={center - barWidth - 2} y={majoristaY} />
+              {granjaY !== null ? <rect className="price-chart-bar price-chart-bar-granja" height={baseline - granjaY} rx="2" width={barWidth} x={center + 2} y={granjaY} /> : null}
+              <text className="price-chart-date" textAnchor="end" transform={`translate(${center + 8} ${chartHeight - 18}) rotate(-48)`}>{shortChartDate(price.fechaBoletin)}</text>
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
+}
+
+function shortChartDate(value: string): string {
+  const [, month, day] = value.split("-");
+  return `${day}/${month}`;
 }

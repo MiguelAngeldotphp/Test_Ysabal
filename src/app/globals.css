@@ -171,10 +171,11 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 .price-chart { display: block; width: 100%; min-width: 620px; overflow: visible; }
 .price-chart-grid { stroke: #dce7de; stroke-width: 1; }
 .price-chart-axis { fill: #65756b; font-size: 12px; }
-.price-chart-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .price-chart-majorista, .price-line-majorista { stroke: #226847; background: #226847; }
 .price-chart-granja, .price-line-granja { stroke: #bf7a18; background: #bf7a18; }
-.price-chart-point { stroke: #fff; stroke-width: 2; }
+.price-chart-bar-majorista { fill: #226847; }
+.price-chart-bar-granja { fill: #bf7a18; }
+.price-chart-date { fill: #65756b; font-size: 11px; }
 
 .table-wrap { width: 100%; overflow-x: auto; }
 
