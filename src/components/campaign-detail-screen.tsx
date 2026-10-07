@@ -789,8 +789,13 @@ function ExpensesSection({
 
   return (
     <section className="panel sales-panel">
-      <header className="panel-header">
+      <header className="panel-header expense-panel-header">
         <div><h2>Gastos e ingresos</h2><p>Movimientos económicos registrados para esta campaña.</p></div>
+        <div className="expense-summary" aria-label="Resumen económico de la campaña">
+          <div><span>Egresos</span><strong className="expense-outflow">{formatSoles(totalEgresos)}</strong></div>
+          <div><span>Ingresos</span><strong className="expense-inflow">{formatSoles(totalIngresos)}</strong></div>
+          <div className={saldo >= 0 ? "expense-balance-positive" : "expense-balance-negative"}><span>Saldo</span><strong>{formatSoles(saldo)}</strong></div>
+        </div>
         {campaign.estado !== "finalizada" ? <button className="button button-primary" disabled={!canEdit} onClick={onNewExpense} type="button">+ Registrar movimiento</button> : null}
       </header>
       {campaign.gastos.length ? (
@@ -809,17 +814,6 @@ function ExpensesSection({
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={4}><strong>Totales de la campaña</strong></td>
-                <td className="expense-outflow">{formatSoles(totalEgresos)}</td>
-                <td className="expense-inflow">{formatSoles(totalIngresos)}</td>
-              </tr>
-              <tr className={saldo >= 0 ? "expense-balance-positive" : "expense-balance-negative"}>
-                <td colSpan={5}><strong>Saldo acumulado</strong></td>
-                <td>{formatSoles(saldo)}</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       ) : <p className="empty-inline">Aún no hay gastos ni ingresos registrados.</p>}

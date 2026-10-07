@@ -570,12 +570,16 @@ textarea:focus {
 
 .sales-panel { margin-top: 1rem; }
 .expense-table { min-width: 980px; }
-.expense-table tfoot td { border-top: 1px solid #dce7de; padding: 0.85rem 1.25rem; background: #f8faf8; font-weight: 760; }
-.expense-table tfoot tr + tr td { border-top-color: #e8efea; }
+.expense-panel-header { align-items: center; }
+.expense-summary { display: flex; align-items: stretch; border: 1px solid #d7e4d9; border-radius: 0.78rem; overflow: hidden; background: #fbfdfb; }
+.expense-summary > div { display: grid; gap: 0.18rem; min-width: 112px; padding: 0.52rem 0.78rem; border-left: 1px solid #dce7de; text-align: center; }
+.expense-summary > div:first-child { border-left: 0; }
+.expense-summary span { color: var(--ink-soft); font-size: 0.72rem; font-weight: 720; text-transform: uppercase; }
+.expense-summary strong { font-size: 0.94rem; white-space: nowrap; }
 .expense-outflow { color: #9a3730; font-weight: 760; white-space: nowrap; }
 .expense-inflow { color: var(--green-dark); font-weight: 760; white-space: nowrap; }
-.expense-balance-positive td:last-child { color: var(--green-dark); }
-.expense-balance-negative td:last-child { color: #9a3730; }
+.expense-balance-positive strong { color: var(--green-dark); }
+.expense-balance-negative strong { color: #9a3730; }
 
 .bank-options { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0; border: 1px solid #c8d7cc; border-radius: 0.65rem; padding: 0.75rem; }
 .bank-options legend { padding: 0 0.25rem; color: var(--ink); font-size: 0.9rem; font-weight: 700; }
@@ -773,6 +777,8 @@ textarea:focus {
   .record-pair { grid-template-columns: 1fr; }
   .sale-workbench { grid-template-columns: 1fr; }
   .group-form-card { position: static; }
+  .expense-panel-header { flex-wrap: wrap; }
+  .expense-summary { order: 3; }
 }
 
 @media (max-width: 720px) {
@@ -799,6 +805,9 @@ textarea:focus {
   .price-chart-legend { margin-left: 0; }
   .metric-grid { grid-template-columns: 1fr; }
   .two-columns { grid-template-columns: 1fr; }
+  .expense-panel-header .button { width: 100%; }
+  .expense-summary { width: 100%; }
+  .expense-summary > div { min-width: 0; flex: 1; padding: 0.52rem 0.35rem; }
   .record-list-item { align-items: flex-start; flex-direction: column; }
   .record-summary { text-align: left; }
   .weight-list-item { grid-template-columns: 1fr 1fr; }
