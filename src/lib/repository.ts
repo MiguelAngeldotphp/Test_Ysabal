@@ -209,6 +209,21 @@ export async function refreshWholesaleChickenPrice(): Promise<WholesaleChickenPr
   };
 }
 
+export async function getWholesaleChickenPriceHistory(startDate: string, endDate: string): Promise<WholesaleChickenPrice[]> {
+  const client = getSupabaseBrowser();
+  if (!client) return [];
+
+  const { data, error } = await client
+    .from("precios_pollo_mayorista")
+    .select("fecha_boletin, precio_por_kg, precio_granja_por_kg, fuente_url")
+    .gte("fecha_boletin", startDate)
+    .lte("fecha_boletin", endDate)
+    .order("fecha_boletin", { ascending: true });
+
+  if (error) throw new AppError(databaseMessage(error), 500);
+  return (data as Row[]).map(mapWholesaleChickenPrice);
+}
+
 export function onAuthChange(callback: (session: Session | null) => void): () => void {
   const client = getSupabaseBrowser();
   if (!client) return () => undefined;

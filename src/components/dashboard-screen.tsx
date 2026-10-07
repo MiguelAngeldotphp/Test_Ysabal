@@ -15,6 +15,7 @@ import {
   createCampaign,
   createGalpon,
   getDashboard,
+  getWholesaleChickenPriceHistory,
   refreshWholesaleChickenPrice,
   signOut,
   type DataSource,
@@ -26,12 +27,17 @@ type DashboardScreenProps = {
   mode: "live" | "demo";
 };
 
-type DialogName = "campaign" | "galpon" | null;
+type DialogName = "campaign" | "galpon" | "priceHistory" | null;
 
 export function DashboardScreen({ mode }: DashboardScreenProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [galpones, setGalpones] = useState<Galpon[]>([]);
   const [wholesaleChickenPrice, setWholesaleChickenPrice] = useState<WholesaleChickenPrice | null>(null);
+  const [priceHistory, setPriceHistory] = useState<WholesaleChickenPrice[]>([]);
+  const [priceHistoryStart, setPriceHistoryStart] = useState(() => defaultPriceDateRange().start);
+  const [priceHistoryEnd, setPriceHistoryEnd] = useState(() => defaultPriceDateRange().end);
+  const [loadingPriceHistory, setLoadingPriceHistory] = useState(false);
+  const [priceHistoryError, setPriceHistoryError] = useState<string | null>(null);
   const [priceMessage, setPriceMessage] = useState<string | null>(null);
   const [refreshingPrice, setRefreshingPrice] = useState(false);
   const [source, setSource] = useState<DataSource>(mode);
@@ -70,6 +76,31 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
     } finally {
       setRefreshingPrice(false);
     }
+  }
+
+  async function loadPriceHistory(startDate = priceHistoryStart, endDate = priceHistoryEnd) {
+    if (startDate > endDate) {
+      setPriceHistoryError("La fecha de inicio debe ser anterior a la fecha final.");
+      return;
+    }
+
+    setLoadingPriceHistory(true);
+    setPriceHistoryError(null);
+    try {
+      setPriceHistory(await getWholesaleChickenPriceHistory(startDate, endDate));
+    } catch (error) {
+      setPriceHistoryError(error instanceof Error ? error.message : "No se pudo obtener el historial de precios.");
+    } finally {
+      setLoadingPriceHistory(false);
+    }
+  }
+
+  function openPriceHistory() {
+    const range = defaultPriceDateRange();
+    setPriceHistoryStart(range.start);
+    setPriceHistoryEnd(range.end);
+    setDialog("priceHistory");
+    void loadPriceHistory(range.start, range.end);
   }
 
   function openDialog(name: Exclude<DialogName, null>) {
@@ -177,6 +208,9 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
             <span className="market-price-date">{wholesaleChickenPrice ? `Boletín: ${formatDate(wholesaleChickenPrice.fechaBoletin)}` : "Aún no hay un boletín registrado"}</span>
           </div>
           <div className="market-price-actions">
+            <button className="button button-secondary market-price-button" disabled={source !== "live"} onClick={openPriceHistory} type="button">
+              Ver gráfico
+            </button>
             <button className="button button-secondary market-price-button" disabled={!canEdit || refreshingPrice} onClick={() => void handlePriceRefresh()} type="button">
               {refreshingPrice ? "Verificando…" : "Verificar último boletín"}
             </button>
@@ -323,6 +357,26 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
           </form>
         </Modal>
       ) : null}
+
+      {dialog === "priceHistory" ? (
+        <Modal description="Compara la evolución diaria del precio mayorista y de granja." onClose={() => setDialog(null)} size="wide" title="Historial de precios de pollo">
+          <div className="modal-body price-history-modal">
+            <form className="price-history-filters" onSubmit={(event) => { event.preventDefault(); void loadPriceHistory(); }}>
+              <label>
+                Fecha de inicio
+                <input max={priceHistoryEnd} onChange={(event) => setPriceHistoryStart(event.target.value)} required type="date" value={priceHistoryStart} />
+              </label>
+              <label>
+                Fecha de fin
+                <input min={priceHistoryStart} onChange={(event) => setPriceHistoryEnd(event.target.value)} required type="date" value={priceHistoryEnd} />
+              </label>
+              <button className="button button-secondary" disabled={loadingPriceHistory} type="submit">{loadingPriceHistory ? "Actualizando…" : "Aplicar filtro"}</button>
+            </form>
+            {priceHistoryError ? <p className="form-message" role="alert">{priceHistoryError}</p> : null}
+            {loadingPriceHistory ? <p className="empty-inline">Cargando historial…</p> : priceHistory.length ? <PriceHistoryChart prices={priceHistory} /> : <p className="empty-inline">No hay boletines registrados en este rango.</p>}
+          </div>
+        </Modal>
+      ) : null}
     </main>
   );
 }
@@ -351,6 +405,53 @@ function TableSkeleton() {
       <span /><span /><span /><span />
       <span /><span /><span /><span />
       <span /><span /><span /><span />
+    </div>
+  );
+}
+
+function defaultPriceDateRange(): { start: string; end: string } {
+  const end = new Date();
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - 1);
+  return { start: dateInputValue(start), end: dateInputValue(end) };
+}
+
+function dateInputValue(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
+function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
+  const chartWidth = 720;
+  const chartHeight = 310;
+  const left = 58;
+  const right = 24;
+  const top = 22;
+  const bottom = 54;
+  const values = prices.flatMap((price) => [price.precioPorKg, price.precioGranjaPorKg].filter((value): value is number => value !== null));
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const padding = Math.max((high - low) * 0.15, 0.2);
+  const min = Math.max(0, low - padding);
+  const max = high + padding;
+  const plotWidth = chartWidth - left - right;
+  const plotHeight = chartHeight - top - bottom;
+  const x = (index: number) => prices.length === 1 ? left + plotWidth / 2 : left + index / (prices.length - 1) * plotWidth;
+  const y = (value: number) => top + (max - value) / (max - min) * plotHeight;
+  const pathFor = (valuesForSeries: Array<number | null>) => valuesForSeries.reduce<string>((path, value, index) => value === null ? path : `${path}${path && valuesForSeries[index - 1] !== null ? " L" : " M"}${x(index)} ${y(value)}`, "");
+  const labels = [0, 0.5, 1].map((position) => min + (max - min) * position);
+  const labelIndexes = [...new Set([0, Math.floor((prices.length - 1) / 2), prices.length - 1])];
+
+  return (
+    <div className="price-chart-wrap">
+      <div className="price-chart-legend"><span><i className="price-line-majorista" />Mayorista</span><span><i className="price-line-granja" />Granja</span></div>
+      <svg aria-label="Gráfico de evolución de precios por kilogramo" className="price-chart" role="img" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+        {labels.map((value) => <g key={value}><line className="price-chart-grid" x1={left} x2={chartWidth - right} y1={y(value)} y2={y(value)} /><text className="price-chart-axis" textAnchor="end" x={left - 10} y={y(value) + 4}>S/ {value.toFixed(2)}</text></g>)}
+        <path className="price-chart-line price-chart-majorista" d={pathFor(prices.map((price) => price.precioPorKg))} />
+        <path className="price-chart-line price-chart-granja" d={pathFor(prices.map((price) => price.precioGranjaPorKg))} />
+        {prices.map((price, index) => <g key={price.fechaBoletin}><circle className="price-chart-point price-chart-majorista" cx={x(index)} cy={y(price.precioPorKg)} r="4" />{price.precioGranjaPorKg !== null ? <circle className="price-chart-point price-chart-granja" cx={x(index)} cy={y(price.precioGranjaPorKg)} r="4" /> : null}</g>)}
+        {labelIndexes.map((index) => <text className="price-chart-axis" key={index} textAnchor="middle" x={x(index)} y={chartHeight - 18}>{formatDate(prices[index].fechaBoletin)}</text>)}
+      </svg>
     </div>
   );
 }
