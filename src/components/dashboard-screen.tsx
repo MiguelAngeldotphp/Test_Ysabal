@@ -439,6 +439,10 @@ function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
   const barWidth = Math.max(8, Math.min(18, (groupWidth - 8) / 2));
   const groupCenter = (index: number) => left + groupWidth * index + groupWidth / 2;
   const y = (value: number) => top + (max - value) / (max - min) * plotHeight;
+  const pathFor = (series: Array<number | null>) => series.reduce<string>((path, value, index) => {
+    if (value === null) return path;
+    return `${path}${path && series[index - 1] !== null ? " L" : " M"}${groupCenter(index)} ${y(value)}`;
+  }, "");
   const labels = [0, 0.5, 1].map((position) => min + (max - min) * position);
   const baseline = y(0);
 
@@ -450,15 +454,29 @@ function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
         {prices.map((price, index) => {
           const center = groupCenter(index);
           const majoristaY = y(price.precioPorKg);
-          const granjaY = price.precioGranjaPorKg === null ? null : y(price.precioGranjaPorKg);
+          const granjaPrice = price.precioGranjaPorKg;
+          const majoristaX = center - barWidth - 2;
+          const granjaX = center + 2;
           return (
             <g key={price.fechaBoletin}>
-              <rect className="price-chart-bar price-chart-bar-majorista" height={baseline - majoristaY} rx="2" width={barWidth} x={center - barWidth - 2} y={majoristaY} />
-              {granjaY !== null ? <rect className="price-chart-bar price-chart-bar-granja" height={baseline - granjaY} rx="2" width={barWidth} x={center + 2} y={granjaY} /> : null}
+              <rect className="price-chart-bar price-chart-bar-majorista" height={baseline - majoristaY} rx="2" width={barWidth} x={majoristaX} y={majoristaY} />
+              <text className="price-chart-bar-value" textAnchor="middle" transform={`translate(${majoristaX + barWidth / 2} ${majoristaY + (baseline - majoristaY) / 2}) rotate(-90)`}>S/ {price.precioPorKg.toFixed(2)}</text>
+              {granjaPrice !== null ? <>
+                <rect className="price-chart-bar price-chart-bar-granja" height={baseline - y(granjaPrice)} rx="2" width={barWidth} x={granjaX} y={y(granjaPrice)} />
+                <text className="price-chart-bar-value" textAnchor="middle" transform={`translate(${granjaX + barWidth / 2} ${y(granjaPrice) + (baseline - y(granjaPrice)) / 2}) rotate(-90)`}>S/ {granjaPrice.toFixed(2)}</text>
+              </> : null}
               <text className="price-chart-date" textAnchor="end" transform={`translate(${center + 8} ${chartHeight - 18}) rotate(-48)`}>{shortChartDate(price.fechaBoletin)}</text>
             </g>
           );
         })}
+        <path className="price-chart-trend price-chart-trend-majorista" d={pathFor(prices.map((price) => price.precioPorKg))} />
+        <path className="price-chart-trend price-chart-trend-granja" d={pathFor(prices.map((price) => price.precioGranjaPorKg))} />
+        {prices.map((price, index) => (
+          <g key={`${price.fechaBoletin}-points`}>
+            <circle className="price-chart-trend-point price-chart-trend-majorista" cx={groupCenter(index)} cy={y(price.precioPorKg)} r="3.5" />
+            {price.precioGranjaPorKg !== null ? <circle className="price-chart-trend-point price-chart-trend-granja" cx={groupCenter(index)} cy={y(price.precioGranjaPorKg)} r="3.5" /> : null}
+          </g>
+        ))}
       </svg>
     </div>
   );
