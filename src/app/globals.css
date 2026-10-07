@@ -151,6 +151,8 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 .market-price-value span,
 .market-price-empty { margin-top: 0.32rem; color: var(--ink-soft); font-size: 0.84rem; }
 
+.market-price-values { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.8rem 1.2rem; }
+.market-price-date { width: 100%; color: var(--ink-soft); font-size: 0.84rem; text-align: right; }
 .market-price-empty { text-align: right; }
 .market-price-button { flex: 0 0 auto; }
 .market-price-message { margin: -0.65rem 0 1rem; color: var(--ink-soft); font-size: 0.84rem; }
@@ -751,6 +753,8 @@ select:focus {
 @media (max-width: 520px) {
   .market-price-card { align-items: flex-start; flex-direction: column; }
   .market-price-value, .market-price-empty { text-align: left; }
+  .market-price-values { justify-content: flex-start; }
+  .market-price-date { text-align: left; }
   .market-price-button { width: 100%; }
   .metric-grid { grid-template-columns: 1fr; }
   .two-columns { grid-template-columns: 1fr; }

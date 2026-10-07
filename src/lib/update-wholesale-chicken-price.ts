@@ -14,6 +14,7 @@ export async function updateWholesaleChickenPrice(): Promise<MidagriPrice> {
   const { error } = await supabase.from("precios_pollo_mayorista").upsert({
     fecha_boletin: price.fechaBoletin,
     precio_por_kg: price.precioPorKg,
+    precio_granja_por_kg: price.precioGranjaPorKg,
     fuente_url: price.fuenteUrl,
     actualizado_en: new Date().toISOString(),
   }, { onConflict: "fecha_boletin" });

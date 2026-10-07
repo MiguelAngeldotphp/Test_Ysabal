@@ -21,6 +21,7 @@ const MONTHS: Record<string, number> = {
 export type MidagriPrice = {
   fechaBoletin: string;
   precioPorKg: number;
+  precioGranjaPorKg: number;
   fuenteUrl: string;
 };
 
@@ -40,6 +41,18 @@ function parsePrice(text: string): number | null {
 
   const value = Number(match[1].replace(",", "."));
   return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function parseFarmPrice(text: string): number | null {
+  const row = text.match(/Granja\s*([\s\S]{0,80}?)(?=Mayorista|Consumidor|Peso\s+promedio|Oferta)/i);
+  if (!row) return null;
+
+  const prices = [...row[1].matchAll(/\d+[.,]\d{1,2}/g)]
+    .map((match) => Number(match[0].replace(",", ".")))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  // El boletín muestra tres días y luego la variación porcentual: el tercer importe es el actual.
+  const currentPrice = prices[2] ?? prices.at(-1);
+  return currentPrice ?? null;
 }
 
 function parseDate(text: string): string | null {
@@ -75,8 +88,11 @@ async function fetchPdf(url: string): Promise<MidagriPrice | null> {
 
   const data = await pdf(Buffer.from(await response.arrayBuffer()));
   const precioPorKg = parsePrice(data.text);
+  const precioGranjaPorKg = parseFarmPrice(data.text);
   const fechaBoletin = parseDate(data.text);
-  return precioPorKg && fechaBoletin ? { precioPorKg, fechaBoletin, fuenteUrl: url } : null;
+  return precioPorKg && precioGranjaPorKg && fechaBoletin
+    ? { precioPorKg, precioGranjaPorKg, fechaBoletin, fuenteUrl: url }
+    : null;
 }
 
 export async function getLatestMidagriPrice(): Promise<MidagriPrice> {

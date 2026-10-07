@@ -166,9 +166,16 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
             <h2>Pollo al por mayor</h2>
           </div>
           {wholesaleChickenPrice ? (
-            <div className="market-price-value">
-              <strong>S/ {wholesaleChickenPrice.precioPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-              <span>por kg · {formatDate(wholesaleChickenPrice.fechaBoletin)}</span>
+            <div className="market-price-values">
+              <div className="market-price-value">
+                <strong>S/ {wholesaleChickenPrice.precioPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                <span>Mayorista por kg</span>
+              </div>
+              <div className="market-price-value">
+                <strong>{wholesaleChickenPrice.precioGranjaPorKg === null ? "—" : `S/ ${wholesaleChickenPrice.precioGranjaPorKg.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong>
+                <span>{wholesaleChickenPrice.precioGranjaPorKg === null ? "Granja pendiente de actualización" : "Granja por kg"}</span>
+              </div>
+              <span className="market-price-date">Boletín: {formatDate(wholesaleChickenPrice.fechaBoletin)}</span>
             </div>
           ) : (
             <p className="market-price-empty">Aún no hay un precio actualizado.</p>
@@ -176,6 +183,11 @@ export function DashboardScreen({ mode }: DashboardScreenProps) {
           <button className="button button-secondary market-price-button" disabled={!canEdit || refreshingPrice} onClick={() => void handlePriceRefresh()} type="button">
             {refreshingPrice ? "Verificando…" : "Verificar último boletín"}
           </button>
+          {wholesaleChickenPrice ? (
+            <a className="button button-secondary market-price-button" href={wholesaleChickenPrice.fuenteUrl} rel="noreferrer" target="_blank">
+              Ver PDF fuente
+            </a>
+          ) : null}
         </section>
         {priceMessage ? <p className="market-price-message" role="status">{priceMessage}</p> : null}
 

@@ -28,6 +28,8 @@ export type LoadResult<T> = {
 export type WholesaleChickenPrice = {
   fechaBoletin: string;
   precioPorKg: number;
+  precioGranjaPorKg: number | null;
+  fuenteUrl: string;
 };
 
 export class AppError extends Error {
@@ -101,6 +103,10 @@ function mapWholesaleChickenPrice(row: Row): WholesaleChickenPrice {
   return {
     fechaBoletin: String(row.fecha_boletin),
     precioPorKg: asNumber(row.precio_por_kg),
+    precioGranjaPorKg: row.precio_granja_por_kg === null || row.precio_granja_por_kg === undefined
+      ? null
+      : asNumber(row.precio_granja_por_kg),
+    fuenteUrl: String(row.fuente_url),
   };
 }
 
@@ -190,14 +196,16 @@ export async function refreshWholesaleChickenPrice(): Promise<WholesaleChickenPr
     method: "POST",
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
-  const payload = await response.json() as { error?: unknown; fechaBoletin?: unknown; precioPorKg?: unknown };
-  if (!response.ok || !payload.fechaBoletin || payload.precioPorKg === undefined) {
+  const payload = await response.json() as { error?: unknown; fechaBoletin?: unknown; precioPorKg?: unknown; precioGranjaPorKg?: unknown; fuenteUrl?: unknown };
+  if (!response.ok || !payload.fechaBoletin || payload.precioPorKg === undefined || payload.precioGranjaPorKg === undefined || !payload.fuenteUrl) {
     throw new AppError(String(payload.error ?? "No se pudo actualizar el precio."), response.status);
   }
 
   return {
     fechaBoletin: String(payload.fechaBoletin),
     precioPorKg: asNumber(payload.precioPorKg),
+    precioGranjaPorKg: asNumber(payload.precioGranjaPorKg),
+    fuenteUrl: String(payload.fuenteUrl),
   };
 }
 
@@ -241,7 +249,7 @@ export async function getDashboard(): Promise<LoadResult<{ campaigns: Campaign[]
   const [campaignResponse, galponResponse, priceResponse] = await Promise.all([
     client.from("campanas").select(CAMPAIGN_SELECT).order("fecha_inicio", { ascending: false }),
     client.from("galpones").select("id, nombre, direccion").order("nombre"),
-    client.from("precios_pollo_mayorista").select("fecha_boletin, precio_por_kg").order("fecha_boletin", { ascending: false }).limit(1).maybeSingle(),
+    client.from("precios_pollo_mayorista").select("fecha_boletin, precio_por_kg, precio_granja_por_kg, fuente_url").order("fecha_boletin", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   if (campaignResponse.error || galponResponse.error) {
