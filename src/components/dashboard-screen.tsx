@@ -456,10 +456,10 @@ function PriceHistoryChart({ prices }: { prices: WholesaleChickenPrice[] }) {
           return (
             <g key={price.fechaBoletin}>
               <rect className="price-chart-bar price-chart-bar-majorista" height={baseline - majoristaY} rx="2" width={barWidth} x={majoristaX} y={majoristaY} />
-              <text className="price-chart-bar-value" textAnchor="middle" transform={`translate(${majoristaX + barWidth / 2} ${majoristaY + (baseline - majoristaY) / 2}) rotate(-90)`}>S/ {price.precioPorKg.toFixed(2)}</text>
+              <text className="price-chart-bar-value" dominantBaseline="middle" textAnchor="middle" transform={`translate(${majoristaX + barWidth / 2} ${majoristaY + (baseline - majoristaY) / 2}) rotate(-90)`}>S/ {price.precioPorKg.toFixed(2)}</text>
               {granjaPrice !== null ? <>
                 <rect className="price-chart-bar price-chart-bar-granja" height={baseline - y(granjaPrice)} rx="2" width={barWidth} x={granjaX} y={y(granjaPrice)} />
-                <text className="price-chart-bar-value" textAnchor="middle" transform={`translate(${granjaX + barWidth / 2} ${y(granjaPrice) + (baseline - y(granjaPrice)) / 2}) rotate(-90)`}>S/ {granjaPrice.toFixed(2)}</text>
+                <text className="price-chart-bar-value" dominantBaseline="middle" textAnchor="middle" transform={`translate(${granjaX + barWidth / 2} ${y(granjaPrice) + (baseline - y(granjaPrice)) / 2}) rotate(-90)`}>S/ {granjaPrice.toFixed(2)}</text>
               </> : null}
               <text className="price-chart-date" textAnchor="end" transform={`translate(${center + 8} ${chartHeight - 18}) rotate(-48)`}>{shortChartDate(price.fechaBoletin)}</text>
             </g>
