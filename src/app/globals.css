@@ -170,13 +170,13 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 .price-chart-legend i { width: 1.25rem; height: 0.22rem; border-radius: 99px; }
 .price-chart { display: block; width: 100%; min-width: 620px; overflow: visible; }
 .price-chart-grid { stroke: #dce7de; stroke-width: 1; }
-.price-chart-axis { fill: #65756b; font-size: 12px; }
+.price-chart-axis { fill: #65756b; font-size: 13px; }
 .price-chart-majorista, .price-line-majorista { stroke: #226847; background: #226847; }
 .price-chart-granja, .price-line-granja { stroke: #bf7a18; background: #bf7a18; }
 .price-chart-bar-majorista { fill: #226847; }
 .price-chart-bar-granja { fill: #bf7a18; }
-.price-chart-bar-value { fill: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; paint-order: stroke; pointer-events: none; stroke: rgba(0, 0, 0, 0.14); stroke-width: 0.55px; }
-.price-chart-date { fill: #65756b; font-size: 11px; }
+.price-chart-bar-value { fill: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0.02em; paint-order: stroke; pointer-events: none; stroke: rgba(0, 0, 0, 0.14); stroke-width: 0.6px; }
+.price-chart-date { fill: #65756b; font-size: 12px; font-weight: 650; }
 
 .table-wrap { width: 100%; overflow-x: auto; }
 
