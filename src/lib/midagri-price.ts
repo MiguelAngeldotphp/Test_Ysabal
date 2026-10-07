@@ -33,7 +33,9 @@ function normalizeUrl(value: string): string {
 }
 
 function parsePrice(text: string): number | null {
-  const match = text.match(/pollo\s+en\s+pie\s+se\s+vendi[oó]\s+a\s+S\/\s*([0-9]+(?:[.,][0-9]{1,2})?)/i);
+  const match = text.match(
+    /S\/\s*([0-9]+(?:[.,][0-9]{1,2})?)\s*(?:[\d,.]+\s*t\s*)?Precio\s+promedio\s+por\s+kg\s+de\s+pollo\s+al\s+por\s+mayor/i,
+  ) ?? text.match(/pollo\s+en\s+pie\s+se\s+vendi[oó]\s+a\s+S\/\s*([0-9]+(?:[.,][0-9]{1,2})?)/i);
   if (!match) return null;
 
   const value = Number(match[1].replace(",", "."));
@@ -41,7 +43,9 @@ function parsePrice(text: string): number | null {
 }
 
 function parseDate(text: string): string | null {
-  const match = text.match(/Lima,\s*(\d{1,2})\s+de\s+([a-záéíóú]+)\s+del?\s+(\d{4})/i);
+  const match = text.match(
+    /(?:Lima,\s*|(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo),\s*)(\d{1,2})\s+de\s+([a-záéíóú]+)\s+del?\s+(\d{4})/i,
+  );
   if (!match) return null;
 
   const month = MONTHS[match[2].toLocaleLowerCase("es-PE")];
@@ -55,6 +59,11 @@ function pdfLinks(html: string): string[] {
   const matches = html.matchAll(/https?:\/\/[^"'\s<>]+?\.pdf(?:\?[^"'\s<>]+)?/gi);
   return [...new Set([...matches].map((match) => normalizeUrl(match[0])))]
     .filter((url) => /aves|avicola|av[ií]cola/i.test(url));
+}
+
+function bulletinLinks(html: string): string[] {
+  const matches = html.matchAll(/href=["']([^"']*\/institucion\/midagri\/informes-publicaciones\/[^"']*aves[^"']*)["']/gi);
+  return [...new Set([...matches].map((match) => new URL(normalizeUrl(match[1]), COLLECTION_URL).href))];
 }
 
 async function fetchPdf(url: string): Promise<MidagriPrice | null> {
@@ -84,10 +93,24 @@ export async function getLatestMidagriPrice(): Promise<MidagriPrice> {
   });
   if (!response.ok) throw new Error(`MIDAGRI respondió con estado ${response.status}.`);
 
-  const candidates = pdfLinks(await response.text()).slice(0, 10);
-  for (const url of candidates) {
+  const collectionHtml = await response.text();
+  const directCandidates = pdfLinks(collectionHtml);
+  for (const url of directCandidates) {
     const result = await fetchPdf(url);
     if (result) return result;
+  }
+
+  for (const bulletinUrl of bulletinLinks(collectionHtml).slice(0, 5)) {
+    const bulletinResponse = await fetch(bulletinUrl, {
+      cache: "no-store",
+      headers: { "User-Agent": "YSABAL price updater/1.0" },
+    });
+    if (!bulletinResponse.ok) continue;
+
+    for (const pdfUrl of pdfLinks(await bulletinResponse.text()).slice(0, 10)) {
+      const result = await fetchPdf(pdfUrl);
+      if (result) return result;
+    }
   }
 
   throw new Error("No encontramos un boletín de aves con un precio extraíble en MIDAGRI.");
