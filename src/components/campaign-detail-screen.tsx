@@ -783,6 +783,10 @@ function ExpensesSection({
   canEdit: boolean;
   onNewExpense: () => void;
 }) {
+  const totalEgresos = campaign.gastos.reduce((total, expense) => total + (expense.egreso ?? 0), 0);
+  const totalIngresos = campaign.gastos.reduce((total, expense) => total + (expense.ingreso ?? 0), 0);
+  const saldo = totalIngresos - totalEgresos;
+
   return (
     <section className="panel sales-panel">
       <header className="panel-header">
@@ -805,6 +809,17 @@ function ExpensesSection({
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4}><strong>Totales de la campaña</strong></td>
+                <td className="expense-outflow">{formatSoles(totalEgresos)}</td>
+                <td className="expense-inflow">{formatSoles(totalIngresos)}</td>
+              </tr>
+              <tr className={saldo >= 0 ? "expense-balance-positive" : "expense-balance-negative"}>
+                <td colSpan={5}><strong>Saldo acumulado</strong></td>
+                <td>{formatSoles(saldo)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       ) : <p className="empty-inline">Aún no hay gastos ni ingresos registrados.</p>}
