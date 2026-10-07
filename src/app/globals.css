@@ -363,7 +363,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 2.72rem;
   border: 1px solid #c8d7cc;
@@ -377,7 +378,8 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(40, 102, 77, 0.14);
 }
@@ -567,6 +569,15 @@ select:focus {
 .weight-value span { color: var(--ink-soft); font-size: 0.83rem; }
 
 .sales-panel { margin-top: 1rem; }
+.expense-table { min-width: 980px; }
+.expense-outflow { color: #9a3730; font-weight: 760; white-space: nowrap; }
+.expense-inflow { color: var(--green-dark); font-weight: 760; white-space: nowrap; }
+
+.bank-options { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0; border: 1px solid #c8d7cc; border-radius: 0.65rem; padding: 0.75rem; }
+.bank-options legend { padding: 0 0.25rem; color: var(--ink); font-size: 0.9rem; font-weight: 700; }
+.bank-options > p { width: 100%; margin: 0; color: var(--ink-soft); font-size: 0.83rem; }
+.check-option { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; }
+.check-option input { width: 1rem; min-height: auto; accent-color: var(--green); }
 
 .final-loss {
   display: flex;

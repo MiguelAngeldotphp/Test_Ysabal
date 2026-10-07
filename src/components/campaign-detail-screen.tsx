@@ -20,6 +20,7 @@ import {
   type BirdSex,
   type Campaign,
   type CampaignStats,
+  type Expense,
   type MortalityRecord,
   type Sale,
   type SaleDetail,
@@ -29,11 +30,13 @@ import {
   addMortality,
   addWeight,
   closeCampaign,
+  createExpense,
   createSale,
   deleteMortality,
   deleteWeight,
   finishSale,
   getCampaign,
+  getExpenseCatalog,
   type DataSource,
   updateMortality,
   updateWeight,
@@ -41,6 +44,7 @@ import {
 import {
   closeCampaignSchema,
   finishSaleSchema,
+  expenseSchema,
   mortalitySchema,
   saleDetailSchema,
   saleSchema,
@@ -78,6 +82,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
   const [showWeightGuide, setShowWeightGuide] = useState(false);
   const [showCloseCampaign, setShowCloseCampaign] = useState(false);
   const [showSaleForm, setShowSaleForm] = useState(false);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showFinishSale, setShowFinishSale] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [editingMortality, setEditingMortality] = useState<MortalityRecord | null>(null);
@@ -153,6 +158,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
             canEdit={canEdit}
             onCloseCampaign={() => setShowCloseCampaign(true)}
             onNewSale={() => setShowSaleForm(true)}
+            onNewExpense={() => setShowExpenseForm(true)}
             onFinishSale={() => setShowFinishSale(true)}
           />
         </header>
@@ -230,6 +236,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
           onDetail={setSelectedSale}
           onNewSale={() => setShowSaleForm(true)}
         />
+        <ExpensesSection campaign={campaign} canEdit={canEdit} onNewExpense={() => setShowExpenseForm(true)} />
 
         {campaign.estado === "finalizada" ? (
           <section className="final-loss panel">
@@ -262,6 +269,16 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
           onConfirm={async (payload) => {
             await perform(() => createSale(campaign.id, payload), "Venta registrada correctamente.");
             setShowSaleForm(false);
+          }}
+        />
+      ) : null}
+      {showExpenseForm ? (
+        <ExpenseFormModal
+          campaign={campaign}
+          onClose={() => setShowExpenseForm(false)}
+          onConfirm={async (payload) => {
+            await perform(() => createExpense(campaign.id, payload), "Movimiento registrado correctamente.");
+            setShowExpenseForm(false);
           }}
         />
       ) : null}
@@ -322,17 +339,20 @@ function CampaignActions({
   canEdit,
   onCloseCampaign,
   onNewSale,
+  onNewExpense,
   onFinishSale,
 }: {
   campaign: Campaign;
   canEdit: boolean;
   onCloseCampaign: () => void;
   onNewSale: () => void;
+  onNewExpense: () => void;
   onFinishSale: () => void;
 }) {
   if (campaign.estado === "activa") {
     return (
       <div className="heading-actions">
+        <button className="button button-secondary" disabled={!canEdit} onClick={onNewExpense} type="button">Registrar gasto</button>
         <button className="button button-secondary" disabled={!canEdit} onClick={onNewSale} type="button">Registrar venta</button>
         <button className="button button-primary" disabled={!canEdit} onClick={onCloseCampaign} type="button">Terminar campaña</button>
       </div>
@@ -341,6 +361,7 @@ function CampaignActions({
   if (campaign.estado === "en_venta") {
     return (
       <div className="heading-actions">
+        <button className="button button-secondary" disabled={!canEdit} onClick={onNewExpense} type="button">Registrar gasto</button>
         <button className="button button-secondary" disabled={!canEdit} onClick={onNewSale} type="button">Registrar venta</button>
         <button className="button button-primary" disabled={!canEdit} onClick={onFinishSale} type="button">Terminar venta</button>
       </div>
@@ -750,6 +771,126 @@ function SalesSection({
         </div>
       ) : <p className="empty-inline">Aún no hay ventas registradas.</p>}
     </section>
+  );
+}
+
+function ExpensesSection({
+  campaign,
+  canEdit,
+  onNewExpense,
+}: {
+  campaign: Campaign;
+  canEdit: boolean;
+  onNewExpense: () => void;
+}) {
+  return (
+    <section className="panel sales-panel">
+      <header className="panel-header">
+        <div><h2>Gastos e ingresos</h2><p>Movimientos económicos registrados para esta campaña.</p></div>
+        {campaign.estado !== "finalizada" ? <button className="button button-primary" disabled={!canEdit} onClick={onNewExpense} type="button">+ Registrar movimiento</button> : null}
+      </header>
+      {campaign.gastos.length ? (
+        <div className="table-wrap">
+          <table className="data-table expense-table">
+            <thead><tr><th>Fecha</th><th>Tipo / descripción</th><th>Observación</th><th>Pago / banco</th><th>Egreso</th><th>Ingreso</th></tr></thead>
+            <tbody>
+              {campaign.gastos.map((expense) => (
+                <tr key={expense.id}>
+                  <td>{formatDate(expense.fecha)}</td>
+                  <td><strong>{expense.tipo}</strong><span className="cell-detail">{expense.descripcion}</span></td>
+                  <td>{expense.observacion}</td>
+                  <td><strong>{expense.formaPago}</strong><span className="cell-detail">{expense.bancos.join(" · ")}</span></td>
+                  <td className="expense-outflow">{expense.egreso === null ? "—" : formatSoles(expense.egreso)}</td>
+                  <td className="expense-inflow">{expense.ingreso === null ? "—" : formatSoles(expense.ingreso)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="empty-inline">Aún no hay gastos ni ingresos registrados.</p>}
+    </section>
+  );
+}
+
+function ExpenseFormModal({
+  campaign,
+  onClose,
+  onConfirm,
+}: {
+  campaign: Campaign;
+  onClose: () => void;
+  onConfirm: (input: {
+    fecha: string;
+    tipo: string;
+    descripcion: string;
+    observacion: string;
+    formaPago: string;
+    bancos: ("BCP" | "INTERBANK")[];
+    egreso?: number;
+    ingreso?: number;
+  }) => Promise<void>;
+}) {
+  const [catalog, setCatalog] = useState({ tipos: [] as string[], descripciones: [] as string[], formasPago: [] as string[] });
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [egreso, setEgreso] = useState("");
+  const [ingreso, setIngreso] = useState("");
+  const [bancos, setBancos] = useState<("BCP" | "INTERBANK")[]>([]);
+
+  useEffect(() => {
+    void getExpenseCatalog()
+      .then(setCatalog)
+      .catch((caught) => setCatalogError(caught instanceof Error ? caught.message : "No se pudieron cargar las opciones."));
+  }, []);
+
+  function toggleBank(bank: "BCP" | "INTERBANK") {
+    setBancos((current) => current.includes(bank) ? current.filter((item) => item !== bank) : [...current, bank]);
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const parsed = expenseSchema.safeParse({
+      fecha: form.get("fecha"),
+      tipo: form.get("tipo"),
+      descripcion: form.get("descripcion"),
+      observacion: form.get("observacion"),
+      formaPago: form.get("formaPago"),
+      bancos,
+      egreso,
+      ingreso,
+    });
+    if (!parsed.success) return setError(validationMessage(parsed.error));
+    setBusy(true); setError(null);
+    try { await onConfirm(parsed.data); } catch (caught) { setError(caught instanceof Error ? caught.message : "No se pudo guardar el movimiento."); } finally { setBusy(false); }
+  }
+
+  return (
+    <Modal description="Registra un egreso o un ingreso. Las opciones nuevas quedarán disponibles para las próximas campañas." onClose={onClose} title="Registrar gasto o ingreso">
+      <form className="modal-body stack-form" onSubmit={submit}>
+        <label>Fecha<input defaultValue={todayISO()} max={todayISO()} min={campaign.fechaInicio} name="fecha" required type="date" /></label>
+        <div className="two-columns">
+          <label>Tipo<input list="expense-types" name="tipo" placeholder="Ej. COMIDA" required /></label>
+          <label>Descripción<input list="expense-descriptions" name="descripcion" placeholder="Ej. POLLOS" required /></label>
+        </div>
+        <datalist id="expense-types">{catalog.tipos.map((item) => <option key={item} value={item} />)}</datalist>
+        <datalist id="expense-descriptions">{catalog.descripciones.map((item) => <option key={item} value={item} />)}</datalist>
+        <label>Observación<textarea name="observacion" placeholder="Detalle del movimiento" required rows={3} /></label>
+        <label>Forma de pago<input list="expense-payment-methods" name="formaPago" placeholder="Ej. EFECTIVO" required /></label>
+        <datalist id="expense-payment-methods">{catalog.formasPago.map((item) => <option key={item} value={item} />)}</datalist>
+        <fieldset className="bank-options"><legend>Banco</legend><p>Selecciona uno o ambos bancos.</p>
+          {(["BCP", "INTERBANK"] as const).map((bank) => <label className="check-option" key={bank}><input checked={bancos.includes(bank)} onChange={() => toggleBank(bank)} type="checkbox" />{bank}</label>)}
+        </fieldset>
+        <div className="two-columns">
+          <label>Egreso (S/)<input disabled={Boolean(ingreso)} min="0.01" onChange={(event) => setEgreso(event.target.value)} step="0.01" type="number" value={egreso} /></label>
+          <label>Ingreso (S/)<input disabled={Boolean(egreso)} min="0.01" onChange={(event) => setIngreso(event.target.value)} step="0.01" type="number" value={ingreso} /></label>
+        </div>
+        {catalogError ? <p className="form-message" role="alert">{catalogError}</p> : null}
+        {error ? <p className="form-message" role="alert">{error}</p> : null}
+        <div className="form-actions"><button className="button button-secondary" disabled={busy} onClick={onClose} type="button">Cancelar</button><button className="button button-primary" disabled={busy} type="submit">{busy ? "Guardando…" : "Guardar movimiento"}</button></div>
+      </form>
+    </Modal>
   );
 }
 

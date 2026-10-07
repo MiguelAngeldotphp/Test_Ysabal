@@ -8,6 +8,7 @@ import {
   calculateCampaignStats,
   type Campaign,
   type CampaignStatus,
+  type Expense,
   type Galpon,
   type MortalityRecord,
   type Sale,
@@ -15,7 +16,7 @@ import {
   type WeightRecord,
 } from "@/lib/domain";
 import { getSupabaseBrowser, hasSupabaseConfiguration } from "@/lib/supabase-browser";
-import type { CampaignInput, GalponInput, MortalityInput, SaleInput, WeightInput } from "@/lib/validation";
+import type { CampaignInput, ExpenseInput, GalponInput, MortalityInput, SaleInput, WeightInput } from "@/lib/validation";
 
 export type DataSource = "live" | "demo" | "error";
 
@@ -99,6 +100,20 @@ function mapSale(row: Row): Sale {
   };
 }
 
+function mapExpense(row: Row): Expense {
+  return {
+    id: String(row.id),
+    fecha: String(row.fecha),
+    tipo: String(asRow(row.tipo)?.nombre ?? "Sin tipo"),
+    descripcion: String(asRow(row.descripcion)?.nombre ?? "Sin descripción"),
+    observacion: String(row.observacion ?? ""),
+    formaPago: String(asRow(row.forma_pago)?.nombre ?? "Sin forma de pago"),
+    bancos: Array.isArray(row.bancos) ? row.bancos.map(String) : [],
+    egreso: row.egreso === null || row.egreso === undefined ? null : asNumber(row.egreso),
+    ingreso: row.ingreso === null || row.ingreso === undefined ? null : asNumber(row.ingreso),
+  };
+}
+
 function mapWholesaleChickenPrice(row: Row): WholesaleChickenPrice {
   return {
     fechaBoletin: String(row.fecha_boletin),
@@ -138,6 +153,9 @@ function mapCampaign(row: Row): Campaign {
     ventas: asRows(row.ventas)
       .map(mapSale)
       .sort((a, b) => b.fechaVenta.localeCompare(a.fechaVenta)),
+    gastos: asRows(row.gastos_campana)
+      .map(mapExpense)
+      .sort((a, b) => b.fecha.localeCompare(a.fecha)),
   };
 }
 
@@ -150,6 +168,12 @@ const CAMPAIGN_SELECT = `
   ventas(
     id, cliente, fecha_venta, precio_por_kilo, total_bruto, total_neto,
     detalles_venta_javas(id, sexo, cantidad_javas, pollos_por_java, peso_java_kg, peso_java_con_aves_kg)
+  ),
+  gastos_campana(
+    id, fecha, observacion, bancos, egreso, ingreso,
+    tipo:tipos_gasto(nombre),
+    descripcion:descripciones_gasto(nombre),
+    forma_pago:formas_pago_gasto(nombre)
   )
 `;
 
@@ -508,6 +532,85 @@ export async function createSale(campaignId: string, input: SaleInput): Promise<
     await client.from("ventas").delete().eq("id", saleId);
     throw new AppError(databaseMessage(detailsError), 500);
   }
+}
+
+export type ExpenseCatalog = {
+  tipos: string[];
+  descripciones: string[];
+  formasPago: string[];
+};
+
+function normalizeCatalogValue(value: string): string {
+  return value.trim().toLocaleUpperCase("es-PE");
+}
+
+async function getOrCreateCatalogValue(
+  table: "tipos_gasto" | "descripciones_gasto" | "formas_pago_gasto",
+  value: string,
+): Promise<string> {
+  const client = configuredClient();
+  const nombre = normalizeCatalogValue(value);
+  const { data: existing, error: existingError } = await client
+    .from(table)
+    .select("id")
+    .eq("nombre", nombre)
+    .maybeSingle();
+  if (existingError) throw new AppError(databaseMessage(existingError), 500);
+  if (existing) return String((existing as Row).id);
+
+  const { data: created, error: createError } = await client
+    .from(table)
+    .insert({ nombre })
+    .select("id")
+    .maybeSingle();
+  if (created) return String((created as Row).id);
+
+  // Another session may have registered exactly the same value first.
+  const { data: afterConflict, error: afterConflictError } = await client
+    .from(table)
+    .select("id")
+    .eq("nombre", nombre)
+    .maybeSingle();
+  if (afterConflictError || !afterConflict) throw new AppError(databaseMessage(createError ?? afterConflictError), 500);
+  return String((afterConflict as Row).id);
+}
+
+export async function getExpenseCatalog(): Promise<ExpenseCatalog> {
+  const client = configuredClient();
+  const [tipos, descripciones, formasPago] = await Promise.all([
+    client.from("tipos_gasto").select("nombre").order("nombre"),
+    client.from("descripciones_gasto").select("nombre").order("nombre"),
+    client.from("formas_pago_gasto").select("nombre").order("nombre"),
+  ]);
+  if (tipos.error || descripciones.error || formasPago.error) {
+    throw new AppError(databaseMessage(tipos.error ?? descripciones.error ?? formasPago.error), 500);
+  }
+  const names = (rows: unknown) => asRows(rows).map((row) => String(row.nombre));
+  return { tipos: names(tipos.data), descripciones: names(descripciones.data), formasPago: names(formasPago.data) };
+}
+
+export async function createExpense(campaignId: string, input: ExpenseInput): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado === "finalizada") throw new AppError("No se pueden registrar gastos en una campaña finalizada.");
+
+  const [tipoGastoId, descripcionGastoId, formaPagoId] = await Promise.all([
+    getOrCreateCatalogValue("tipos_gasto", input.tipo),
+    getOrCreateCatalogValue("descripciones_gasto", input.descripcion),
+    getOrCreateCatalogValue("formas_pago_gasto", input.formaPago),
+  ]);
+  const client = configuredClient();
+  const { error } = await client.from("gastos_campana").insert({
+    campana_id: campaignId,
+    fecha: input.fecha,
+    tipo_gasto_id: tipoGastoId,
+    descripcion_gasto_id: descripcionGastoId,
+    observacion: input.observacion.trim(),
+    forma_pago_id: formaPagoId,
+    bancos: input.bancos,
+    egreso: input.egreso ?? null,
+    ingreso: input.ingreso ?? null,
+  });
+  if (error) throw new AppError(databaseMessage(error), 500);
 }
 
 export async function finishSale(campaignId: string, fechaFin: string): Promise<void> {

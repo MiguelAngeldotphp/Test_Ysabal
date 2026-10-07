@@ -59,11 +59,32 @@ export const finishSaleSchema = z.object({
   fechaFin: isoDate,
 });
 
+const optionalMoney = z.preprocess(
+  (value) => value === "" || value === null || value === undefined ? undefined : value,
+  positiveDecimal.optional(),
+);
+
+export const expenseSchema = z.object({
+  fecha: isoDate,
+  tipo: z.string().trim().min(2, "Ingresa o selecciona el tipo.").max(100),
+  descripcion: z.string().trim().min(2, "Ingresa o selecciona la descripción.").max(150),
+  observacion: z.string().trim().min(2, "Escribe una observación.").max(500),
+  formaPago: z.string().trim().min(2, "Ingresa o selecciona la forma de pago.").max(100),
+  bancos: z.array(z.enum(["BCP", "INTERBANK"])).min(1, "Selecciona al menos un banco."),
+  egreso: optionalMoney,
+  ingreso: optionalMoney,
+}).superRefine((value, context) => {
+  if ((value.egreso === undefined && value.ingreso === undefined) || (value.egreso !== undefined && value.ingreso !== undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Registra un monto en egreso o en ingreso, pero no en ambos." });
+  }
+});
+
 export type GalponInput = z.infer<typeof galponSchema>;
 export type CampaignInput = z.infer<typeof campaignSchema>;
 export type MortalityInput = z.infer<typeof mortalitySchema>;
 export type WeightInput = z.infer<typeof weightSchema>;
 export type SaleInput = z.infer<typeof saleSchema>;
+export type ExpenseInput = z.infer<typeof expenseSchema>;
 
 export function validationMessage(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Revisa los datos ingresados.";

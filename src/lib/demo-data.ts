@@ -34,6 +34,7 @@ export const demoCampaigns: Campaign[] = [
       { id: "peso-2", fechaRegistro: daysAgo(6), pesoHembrasKg: 1.02, pesoMachosKg: 1.08 },
     ],
     ventas: [],
+    gastos: [],
   },
   {
     id: "demo-campana-venta",
@@ -49,6 +50,7 @@ export const demoCampaigns: Campaign[] = [
       { id: "mort-4", fechaRegistro: daysAgo(46), hembrasMuertas: 12, machosMuertos: 10 },
       { id: "mort-5", fechaRegistro: daysAgo(31), hembrasMuertas: 9, machosMuertos: 11 },
     ],
+    gastos: [],
     pesos: [
       { id: "peso-3", fechaRegistro: daysAgo(33), pesoHembrasKg: 1.52, pesoMachosKg: 1.63 },
       { id: "peso-4", fechaRegistro: daysAgo(12), pesoHembrasKg: 2.89, pesoMachosKg: 3.06 },
@@ -101,5 +103,6 @@ export const demoCampaigns: Campaign[] = [
       { id: "peso-6", fechaRegistro: daysAgo(74), pesoHembrasKg: 2.75, pesoMachosKg: 3.02 },
     ],
     ventas: [],
+    gastos: [],
   },
 ];

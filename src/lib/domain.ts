@@ -40,6 +40,18 @@ export type Sale = {
   detalles: SaleDetail[];
 };
 
+export type Expense = {
+  id: string;
+  fecha: string;
+  tipo: string;
+  descripcion: string;
+  observacion: string;
+  formaPago: string;
+  bancos: string[];
+  egreso: number | null;
+  ingreso: number | null;
+};
+
 export type Campaign = {
   id: string;
   galpon: Galpon;
@@ -53,6 +65,7 @@ export type Campaign = {
   mortalidad: MortalityRecord[];
   pesos: WeightRecord[];
   ventas: Sale[];
+  gastos: Expense[];
 };
 
 export type CampaignStats = {
