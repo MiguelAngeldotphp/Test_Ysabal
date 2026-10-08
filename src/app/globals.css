@@ -476,6 +476,11 @@ textarea:focus {
 
 .mortality-indicator h2 { margin-top: 0.18rem; font-size: 1.18rem; }
 
+.detail-tabs { display: flex; gap: 0.4rem; overflow-x: auto; margin: 1.25rem 0 1rem; border-bottom: 1px solid var(--line); }
+.detail-tab { flex: 0 0 auto; border: 0; border-bottom: 3px solid transparent; padding: 0.72rem 0.9rem; color: var(--ink-soft); background: transparent; font-size: 0.91rem; font-weight: 720; }
+.detail-tab:hover { color: var(--green-dark); background: #f5f8f5; }
+.detail-tab-active { border-bottom-color: var(--green); color: var(--green-dark); }
+
 .progress-track {
   width: 100%;
   height: 0.74rem;

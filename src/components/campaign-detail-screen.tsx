@@ -69,6 +69,7 @@ type CampaignDetailScreenProps = {
 };
 
 type Toast = { tone: "success" | "error"; text: string } | null;
+type DetailTab = "registros" | "ventas" | "gastos";
 type RecordToDelete =
   | { kind: "mortalidad"; record: MortalityRecord }
   | { kind: "peso"; record: WeightRecord };
@@ -79,6 +80,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Toast>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>("registros");
   const [showWeightGuide, setShowWeightGuide] = useState(false);
   const [showCloseCampaign, setShowCloseCampaign] = useState(false);
   const [showSaleForm, setShowSaleForm] = useState(false);
@@ -177,76 +179,35 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
 
         <CampaignMetrics stats={stats} />
 
-        <section className="mortality-indicator panel">
-          <div>
-            <p className="eyebrow">Indicador de mortalidad</p>
-            <h2>{stats.tasaMortalidad.toFixed(2)}% de la población inicial</h2>
-          </div>
-          <div aria-label={`Mortalidad de ${stats.tasaMortalidad.toFixed(2)} por ciento`} className="progress-track">
-            <div className="progress-fill" style={{ width: `${Math.min(100, stats.tasaMortalidad)}%` }} />
-          </div>
+        <section className="detail-tabs" aria-label="Secciones de la campaña" role="tablist">
+          <button aria-controls="campaign-records" aria-selected={activeTab === "registros"} className={activeTab === "registros" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-records" onClick={() => setActiveTab("registros")} role="tab" type="button">Mortalidad y peso</button>
+          <button aria-controls="campaign-sales" aria-selected={activeTab === "ventas"} className={activeTab === "ventas" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-sales" onClick={() => setActiveTab("ventas")} role="tab" type="button">Ventas</button>
+          <button aria-controls="campaign-expenses" aria-selected={activeTab === "gastos"} className={activeTab === "gastos" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-expenses" onClick={() => setActiveTab("gastos")} role="tab" type="button">Gastos e ingresos</button>
         </section>
 
-        {campaign.estado === "activa" ? (
-          <>
-            <section className="record-pair">
-              <MortalityHistoryCard
-                campaign={campaign}
-                canEdit={canEdit}
-                onDelete={(record) => setRecordToDelete({ kind: "mortalidad", record })}
-                onEdit={setEditingMortality}
-              />
-              <MortalityForm
-                campaign={campaign}
-                canEdit={canEdit}
-                maxDate={recordMax}
-                onSubmit={async (payload) => {
-                  await perform(() => addMortality(campaign.id, payload), "Registro de mortalidad guardado.");
-                }}
-              />
+        {activeTab === "registros" ? (
+          <section aria-labelledby="campaign-tab-records" id="campaign-records" role="tabpanel">
+            <section className="mortality-indicator panel">
+              <div><p className="eyebrow">Indicador de mortalidad</p><h2>{stats.tasaMortalidad.toFixed(2)}% de la población inicial</h2></div>
+              <div aria-label={`Mortalidad de ${stats.tasaMortalidad.toFixed(2)} por ciento`} className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(100, stats.tasaMortalidad)}%` }} /></div>
             </section>
-            <section className="record-pair">
-              <WeightHistoryCard
-                campaign={campaign}
-                canEdit={canEdit}
-                onDelete={(record) => setRecordToDelete({ kind: "peso", record })}
-                onEdit={setEditingWeight}
-              />
-              <WeightForm
-                campaign={campaign}
-                canEdit={canEdit}
-                maxDate={recordMax}
-                onGuide={() => setShowWeightGuide(true)}
-                onSubmit={async (payload) => {
-                  await perform(() => addWeight(campaign.id, payload), "Registro de peso guardado.");
-                }}
-              />
-            </section>
-          </>
-        ) : (
-          <section className="record-pair records-history-pair">
-            <MortalityHistoryCard campaign={campaign} />
-            <WeightHistoryCard campaign={campaign} />
-          </section>
-        )}
-
-        <SalesSection
-          campaign={campaign}
-          canEdit={canEdit}
-          onDetail={setSelectedSale}
-          onNewSale={() => setShowSaleForm(true)}
-        />
-        <ExpensesSection campaign={campaign} canEdit={canEdit} onNewExpense={() => setShowExpenseForm(true)} />
-
-        {campaign.estado === "finalizada" ? (
-          <section className="final-loss panel">
-            <div>
-              <p className="eyebrow">Pérdida al finalizar venta</p>
-              <h2>{stats.perdidasFinales.toLocaleString("es-PE")} aves no vendidas</h2>
-            </div>
-            <p>H {campaign.perdidaHembras.toLocaleString("es-PE")} · M {campaign.perdidaMachos.toLocaleString("es-PE")}</p>
+            {campaign.estado === "activa" ? (
+              <>
+                <section className="record-pair"><MortalityHistoryCard campaign={campaign} canEdit={canEdit} onDelete={(record) => setRecordToDelete({ kind: "mortalidad", record })} onEdit={setEditingMortality} /><MortalityForm campaign={campaign} canEdit={canEdit} maxDate={recordMax} onSubmit={async (payload) => { await perform(() => addMortality(campaign.id, payload), "Registro de mortalidad guardado."); }} /></section>
+                <section className="record-pair"><WeightHistoryCard campaign={campaign} canEdit={canEdit} onDelete={(record) => setRecordToDelete({ kind: "peso", record })} onEdit={setEditingWeight} /><WeightForm campaign={campaign} canEdit={canEdit} maxDate={recordMax} onGuide={() => setShowWeightGuide(true)} onSubmit={async (payload) => { await perform(() => addWeight(campaign.id, payload), "Registro de peso guardado."); }} /></section>
+              </>
+            ) : <section className="record-pair records-history-pair"><MortalityHistoryCard campaign={campaign} /><WeightHistoryCard campaign={campaign} /></section>}
           </section>
         ) : null}
+
+        {activeTab === "ventas" ? (
+          <section aria-labelledby="campaign-tab-sales" id="campaign-sales" role="tabpanel">
+            <SalesSection campaign={campaign} canEdit={canEdit} onDetail={setSelectedSale} onNewSale={() => setShowSaleForm(true)} />
+            {campaign.estado === "finalizada" ? <section className="final-loss panel"><div><p className="eyebrow">Pérdida al finalizar venta</p><h2>{stats.perdidasFinales.toLocaleString("es-PE")} aves no vendidas</h2></div><p>H {campaign.perdidaHembras.toLocaleString("es-PE")} · M {campaign.perdidaMachos.toLocaleString("es-PE")}</p></section> : null}
+          </section>
+        ) : null}
+
+        {activeTab === "gastos" ? <section aria-labelledby="campaign-tab-expenses" id="campaign-expenses" role="tabpanel"><ExpensesSection campaign={campaign} canEdit={canEdit} onNewExpense={() => setShowExpenseForm(true)} /></section> : null}
       </section>
 
       {showWeightGuide ? (
