@@ -69,7 +69,7 @@ type CampaignDetailScreenProps = {
 };
 
 type Toast = { tone: "success" | "error"; text: string } | null;
-type DetailTab = "registros" | "ventas" | "gastos";
+type DetailTab = "dashboard" | "registros" | "ventas" | "gastos";
 type RecordToDelete =
   | { kind: "mortalidad"; record: MortalityRecord }
   | { kind: "peso"; record: WeightRecord };
@@ -80,7 +80,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Toast>(null);
-  const [activeTab, setActiveTab] = useState<DetailTab>("registros");
+  const [activeTab, setActiveTab] = useState<DetailTab>("dashboard");
   const [showWeightGuide, setShowWeightGuide] = useState(false);
   const [showCloseCampaign, setShowCloseCampaign] = useState(false);
   const [showSaleForm, setShowSaleForm] = useState(false);
@@ -180,10 +180,13 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
         <CampaignMetrics stats={stats} />
 
         <section className="detail-tabs" aria-label="Secciones de la campaña" role="tablist">
+          <button aria-controls="campaign-dashboard" aria-selected={activeTab === "dashboard"} className={activeTab === "dashboard" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-dashboard" onClick={() => setActiveTab("dashboard")} role="tab" type="button">Dashboard</button>
           <button aria-controls="campaign-records" aria-selected={activeTab === "registros"} className={activeTab === "registros" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-records" onClick={() => setActiveTab("registros")} role="tab" type="button">Mortalidad y peso</button>
           <button aria-controls="campaign-sales" aria-selected={activeTab === "ventas"} className={activeTab === "ventas" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-sales" onClick={() => setActiveTab("ventas")} role="tab" type="button">Ventas</button>
           <button aria-controls="campaign-expenses" aria-selected={activeTab === "gastos"} className={activeTab === "gastos" ? "detail-tab detail-tab-active" : "detail-tab"} id="campaign-tab-expenses" onClick={() => setActiveTab("gastos")} role="tab" type="button">Gastos e ingresos</button>
         </section>
+
+        {activeTab === "dashboard" ? <CampaignDashboard campaign={campaign} stats={stats} /> : null}
 
         {activeTab === "registros" ? (
           <section aria-labelledby="campaign-tab-records" id="campaign-records" role="tabpanel">
@@ -357,6 +360,70 @@ function CampaignMetrics({ stats }: { stats: CampaignStats }) {
       </article>
     </section>
   );
+}
+
+function CampaignDashboard({ campaign, stats }: { campaign: Campaign; stats: CampaignStats }) {
+  const latestWeight = campaign.pesos[0] ?? null;
+  const saleIncome = campaign.ventas.reduce((total, sale) => total + sale.totalNeto, 0);
+  const otherIncome = campaign.gastos.reduce((total, expense) => total + (expense.ingreso ?? 0), 0);
+  const expenses = campaign.gastos.reduce((total, expense) => total + (expense.egreso ?? 0), 0);
+  const netResult = saleIncome + otherIncome - expenses;
+  const expensesByType = Array.from(campaign.gastos.reduce((totals, expense) => {
+    if (expense.egreso !== null) totals.set(expense.tipo, (totals.get(expense.tipo) ?? 0) + expense.egreso);
+    return totals;
+  }, new Map<string, number>()).entries()).sort(([, first], [, second]) => second - first);
+  const maxExpense = Math.max(...expensesByType.map(([, value]) => value), 1);
+  const maxWeight = Math.max(latestWeight?.pesoHembrasKg ?? 0, latestWeight?.pesoMachosKg ?? 0, 1);
+
+  return (
+    <section aria-labelledby="campaign-tab-dashboard" className="campaign-dashboard" id="campaign-dashboard" role="tabpanel">
+      <header className="dashboard-intro"><div><p className="eyebrow">Resumen de {campaign.galpon.nombre}</p><h2>Decisiones de esta campaña</h2><p>Producción, crecimiento y resultado económico con la información registrada.</p></div><span>Día {stats.diasCrianza}</span></header>
+
+      <section className="dashboard-metric-grid">
+        <DashboardMetric label="Aves vivas" value={stats.avesVivas.toLocaleString("es-PE")} detail={`de ${stats.poblacionInicial.toLocaleString("es-PE")} iniciales`} />
+        <DashboardMetric label="Mortalidad" tone="danger" value={`${stats.tasaMortalidad.toFixed(2)}%`} detail={`${stats.mortalidadTotal.toLocaleString("es-PE")} aves registradas`} />
+        <DashboardMetric label="Ventas netas" tone="positive" value={formatSoles(saleIncome)} detail={`${stats.avesVendidas.toLocaleString("es-PE")} aves vendidas`} />
+        <DashboardMetric label="Resultado estimado" tone={netResult >= 0 ? "positive" : "danger"} value={formatSoles(netResult)} detail="ventas + ingresos − egresos" />
+      </section>
+
+      <section className="dashboard-panels">
+        <article className="panel dashboard-panel">
+          <header className="panel-header"><div><h2>Producción</h2><p>Estado actual de las aves en el galpón.</p></div></header>
+          <div className="dashboard-production">
+            <DashboardValue label="Hembras vivas" value={stats.hembrasVivas.toLocaleString("es-PE")} detail={`${stats.hembrasMuertas} bajas`} />
+            <DashboardValue label="Machos vivos" value={stats.machosVivos.toLocaleString("es-PE")} detail={`${stats.machosMuertos} bajas`} />
+            <DashboardValue label="Aves vendidas" value={stats.avesVendidas.toLocaleString("es-PE")} detail={`${stats.javasVendidas} javas`} />
+          </div>
+        </article>
+
+        <article className="panel dashboard-panel">
+          <header className="panel-header"><div><h2>Crecimiento</h2><p>{latestWeight ? `Último registro: ${formatDate(latestWeight.fechaRegistro)}` : "Aún no hay pesos registrados."}</p></div></header>
+          {latestWeight ? <div className="weight-bars">
+            <WeightBar label="Hembras" value={latestWeight.pesoHembrasKg} max={maxWeight} />
+            <WeightBar label="Machos" value={latestWeight.pesoMachosKg} max={maxWeight} />
+          </div> : <p className="empty-inline">Registra pesos para evaluar el crecimiento.</p>}
+        </article>
+
+        <article className="panel dashboard-panel dashboard-economy-panel">
+          <header className="panel-header"><div><h2>Gastos y rentabilidad</h2><p>Flujo acumulado de la campaña.</p></div></header>
+          <div className="economy-summary"><DashboardValue label="Egresos" value={formatSoles(expenses)} tone="danger" /><DashboardValue label="Otros ingresos" value={formatSoles(otherIncome)} tone="positive" /><DashboardValue label="Saldo operativo" value={formatSoles(otherIncome - expenses)} tone={otherIncome - expenses >= 0 ? "positive" : "danger"} /></div>
+          {expensesByType.length ? <div className="expense-breakdown">{expensesByType.map(([type, value]) => <div className="expense-breakdown-row" key={type}><span>{type}</span><div><i style={{ width: `${(value / maxExpense) * 100}%` }} /><strong>{formatSoles(value)}</strong></div></div>)}</div> : <p className="empty-inline">Aún no hay egresos para analizar.</p>}
+        </article>
+      </section>
+    </section>
+  );
+}
+
+function DashboardMetric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone?: "positive" | "danger" }) {
+  return <article className={`dashboard-metric ${tone ? `dashboard-metric-${tone}` : ""}`}><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
+}
+
+function DashboardValue({ label, value, detail, tone }: { label: string; value: string; detail?: string; tone?: "positive" | "danger" }) {
+  return <div className={`dashboard-value ${tone ? `dashboard-value-${tone}` : ""}`}><span>{label}</span><strong>{value}</strong>{detail ? <small>{detail}</small> : null}</div>;
+}
+
+function WeightBar({ label, value, max }: { label: string; value: number; max: number }) {
+  return <div className="weight-bar"><div><span>{label}</span><strong>{formatKg(value)}</strong></div><div className="weight-bar-track"><i style={{ width: `${Math.max(6, (value / max) * 100)}%` }} /></div></div>;
 }
 
 function MortalityHistoryCard({

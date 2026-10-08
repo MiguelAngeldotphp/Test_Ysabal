@@ -481,6 +481,38 @@ textarea:focus {
 .detail-tab:hover { color: var(--green-dark); background: #f5f8f5; }
 .detail-tab-active { border-bottom-color: var(--green); color: var(--green-dark); }
 
+.campaign-dashboard { display: grid; gap: 1rem; }
+.dashboard-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; }
+.dashboard-intro h2 { margin-top: 0.18rem; font-size: 1.3rem; }
+.dashboard-intro p:not(.eyebrow) { margin-top: 0.28rem; color: var(--ink-soft); }
+.dashboard-intro > span { flex: 0 0 auto; border-radius: 999px; padding: 0.36rem 0.64rem; color: #295d42; background: var(--green-pale); font-size: 0.82rem; font-weight: 760; }
+.dashboard-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
+.dashboard-metric { display: grid; gap: 0.3rem; min-height: 125px; border: 1px solid var(--line); border-radius: 0.9rem; padding: 1rem; background: var(--surface); box-shadow: var(--shadow); }
+.dashboard-metric > span, .dashboard-value > span { color: var(--muted); font-size: 0.74rem; font-weight: 760; letter-spacing: 0.045em; text-transform: uppercase; }
+.dashboard-metric strong { color: var(--ink); font-size: clamp(1.32rem, 2vw, 1.65rem); letter-spacing: -0.035em; }
+.dashboard-metric small, .dashboard-value small { color: var(--ink-soft); font-size: 0.8rem; }
+.dashboard-metric-positive strong, .dashboard-value-positive strong { color: var(--green-dark); }
+.dashboard-metric-danger strong, .dashboard-value-danger strong { color: var(--red); }
+.dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.dashboard-panel { min-height: 230px; }
+.dashboard-economy-panel { grid-column: 1 / -1; min-height: 0; }
+.dashboard-production, .economy-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-value { display: grid; gap: 0.35rem; padding: 1.05rem 1.25rem; border-left: 1px solid #edf1ed; }
+.dashboard-value:first-child { border-left: 0; }
+.dashboard-value strong { font-size: 1.2rem; }
+.weight-bars { display: grid; gap: 1.05rem; padding: 1.2rem 1.25rem; }
+.weight-bar { display: grid; gap: 0.45rem; }
+.weight-bar > div:first-child { display: flex; justify-content: space-between; gap: 1rem; color: var(--ink-soft); font-size: 0.9rem; }
+.weight-bar strong { color: var(--ink); }
+.weight-bar-track { height: 0.7rem; overflow: hidden; border-radius: 999px; background: #e7ece8; }
+.weight-bar-track i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.expense-breakdown { display: grid; gap: 0.75rem; padding: 1.1rem 1.25rem; border-top: 1px solid var(--line); }
+.expense-breakdown-row { display: grid; grid-template-columns: minmax(110px, 0.4fr) minmax(0, 1fr); align-items: center; gap: 1rem; }
+.expense-breakdown-row > span { color: var(--ink-soft); font-size: 0.86rem; font-weight: 680; }
+.expense-breakdown-row > div { display: grid; grid-template-columns: minmax(30px, 1fr) auto; align-items: center; gap: 0.7rem; }
+.expense-breakdown-row i { display: block; height: 0.66rem; border-radius: 999px; background: #be7b28; }
+.expense-breakdown-row strong { color: #805214; font-size: 0.88rem; white-space: nowrap; }
+
 .progress-track {
   width: 100%;
   height: 0.74rem;
@@ -784,6 +816,7 @@ textarea:focus {
   .group-form-card { position: static; }
   .expense-panel-header { flex-wrap: wrap; }
   .expense-summary { order: 3; }
+  .dashboard-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {
@@ -813,6 +846,11 @@ textarea:focus {
   .expense-panel-header .button { width: 100%; }
   .expense-summary { width: 100%; }
   .expense-summary > div { min-width: 0; flex: 1; padding: 0.52rem 0.35rem; }
+  .dashboard-intro { flex-direction: column; }
+  .dashboard-metric-grid, .dashboard-panels, .dashboard-production, .economy-summary { grid-template-columns: 1fr; }
+  .dashboard-value { border-top: 1px solid #edf1ed; border-left: 0; }
+  .dashboard-value:first-child { border-top: 0; }
+  .expense-breakdown-row { grid-template-columns: 1fr; gap: 0.35rem; }
   .record-list-item { align-items: flex-start; flex-direction: column; }
   .record-summary { text-align: left; }
   .weight-list-item { grid-template-columns: 1fr 1fr; }
