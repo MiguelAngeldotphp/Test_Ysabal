@@ -32,6 +32,7 @@ import {
   closeCampaign,
   createExpense,
   createSale,
+  deleteExpense,
   deleteMortality,
   deleteWeight,
   finishSale,
@@ -39,6 +40,7 @@ import {
   getExpenseCatalog,
   type DataSource,
   updateMortality,
+  updateExpense,
   updateWeight,
 } from "@/lib/repository";
 import {
@@ -87,6 +89,8 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showFinishSale, setShowFinishSale] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [editingMortality, setEditingMortality] = useState<MortalityRecord | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<RecordToDelete | null>(null);
@@ -210,7 +214,7 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
           </section>
         ) : null}
 
-        {activeTab === "gastos" ? <section aria-labelledby="campaign-tab-expenses" id="campaign-expenses" role="tabpanel"><ExpensesSection campaign={campaign} canEdit={canEdit} onNewExpense={() => setShowExpenseForm(true)} /></section> : null}
+        {activeTab === "gastos" ? <section aria-labelledby="campaign-tab-expenses" id="campaign-expenses" role="tabpanel"><ExpensesSection campaign={campaign} canEdit={canEdit} onDelete={setExpenseToDelete} onEdit={setEditingExpense} onNewExpense={() => setShowExpenseForm(true)} /></section> : null}
       </section>
 
       {showWeightGuide ? (
@@ -243,6 +247,17 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
           onConfirm={async (payload) => {
             await perform(() => createExpense(campaign.id, payload), "Movimiento registrado correctamente.");
             setShowExpenseForm(false);
+          }}
+        />
+      ) : null}
+      {editingExpense ? (
+        <ExpenseFormModal
+          campaign={campaign}
+          expense={editingExpense}
+          onClose={() => setEditingExpense(null)}
+          onConfirm={async (payload) => {
+            await perform(() => updateExpense(editingExpense.id, campaign.id, payload), "Movimiento actualizado correctamente.");
+            setEditingExpense(null);
           }}
         />
       ) : null}
@@ -291,6 +306,16 @@ export function CampaignDetailScreen({ campaignId, mode }: CampaignDetailScreenP
               await perform(() => deleteWeight(recordToDelete.record.id, campaign.id), "Registro de peso eliminado.");
             }
             setRecordToDelete(null);
+          }}
+        />
+      ) : null}
+      {expenseToDelete ? (
+        <DeleteExpenseModal
+          expense={expenseToDelete}
+          onClose={() => setExpenseToDelete(null)}
+          onConfirm={async () => {
+            await perform(() => deleteExpense(expenseToDelete.id, campaign.id), "Movimiento eliminado correctamente.");
+            setExpenseToDelete(null);
           }}
         />
       ) : null}
@@ -759,6 +784,35 @@ function DeleteRecordModal({
   );
 }
 
+function DeleteExpenseModal({
+  expense,
+  onClose,
+  onConfirm,
+}: {
+  expense: Expense;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try { await onConfirm(); } catch (caught) { setError(caught instanceof Error ? caught.message : "No se pudo eliminar el movimiento."); } finally { setBusy(false); }
+  }
+
+  return (
+    <Modal description={`Eliminarás el movimiento de ${expense.tipo.toLowerCase()} del ${formatDate(expense.fecha)}. Esta acción no se puede deshacer.`} onClose={onClose} title="Eliminar gasto o ingreso">
+      <div className="modal-body stack-form">
+        <p className="delete-warning">Confirma únicamente si este movimiento se ingresó por error.</p>
+        {error ? <p className="form-message" role="alert">{error}</p> : null}
+        <div className="form-actions"><button className="button button-secondary" disabled={busy} onClick={onClose} type="button">Cancelar</button><button className="button button-danger" disabled={busy} onClick={() => void remove()} type="button">{busy ? "Eliminando…" : "Eliminar movimiento"}</button></div>
+      </div>
+    </Modal>
+  );
+}
+
 function SalesSection({
   campaign,
   canEdit,
@@ -805,10 +859,14 @@ function SalesSection({
 function ExpensesSection({
   campaign,
   canEdit,
+  onEdit,
+  onDelete,
   onNewExpense,
 }: {
   campaign: Campaign;
   canEdit: boolean;
+  onEdit: (expense: Expense) => void;
+  onDelete: (expense: Expense) => void;
   onNewExpense: () => void;
 }) {
   const totalEgresos = campaign.gastos.reduce((total, expense) => total + (expense.egreso ?? 0), 0);
@@ -829,7 +887,7 @@ function ExpensesSection({
       {campaign.gastos.length ? (
         <div className="table-wrap">
           <table className="data-table expense-table">
-            <thead><tr><th>Fecha</th><th>Tipo / descripción</th><th>Observación</th><th>Pago / banco</th><th>Egreso</th><th>Ingreso</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo / descripción</th><th>Observación</th><th>Pago / banco</th><th>Egreso</th><th>Ingreso</th>{campaign.estado !== "finalizada" ? <th aria-label="Acciones" /> : null}</tr></thead>
             <tbody>
               {campaign.gastos.map((expense) => (
                 <tr key={expense.id}>
@@ -839,6 +897,7 @@ function ExpensesSection({
                   <td><strong>{expense.formaPago}</strong><span className="cell-detail">{expense.bancos.join(" · ")}</span></td>
                   <td className="expense-outflow">{expense.egreso === null ? "—" : formatSoles(expense.egreso)}</td>
                   <td className="expense-inflow">{expense.ingreso === null ? "—" : formatSoles(expense.ingreso)}</td>
+                  {campaign.estado !== "finalizada" ? <td className="action-cell"><button className="table-link" disabled={!canEdit} onClick={() => onEdit(expense)} type="button">Editar</button><button className="table-link danger-link" disabled={!canEdit} onClick={() => onDelete(expense)} type="button">Eliminar</button></td> : null}
                 </tr>
               ))}
             </tbody>
@@ -851,10 +910,12 @@ function ExpensesSection({
 
 function ExpenseFormModal({
   campaign,
+  expense,
   onClose,
   onConfirm,
 }: {
   campaign: Campaign;
+  expense?: Expense;
   onClose: () => void;
   onConfirm: (input: {
     fecha: string;
@@ -871,9 +932,9 @@ function ExpenseFormModal({
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [egreso, setEgreso] = useState("");
-  const [ingreso, setIngreso] = useState("");
-  const [bancos, setBancos] = useState<("BCP" | "INTERBANK")[]>([]);
+  const [egreso, setEgreso] = useState(expense?.egreso?.toString() ?? "");
+  const [ingreso, setIngreso] = useState(expense?.ingreso?.toString() ?? "");
+  const [bancos, setBancos] = useState<("BCP" | "INTERBANK")[]>(() => expense?.bancos.filter((bank): bank is "BCP" | "INTERBANK" => bank === "BCP" || bank === "INTERBANK") ?? []);
 
   useEffect(() => {
     void getExpenseCatalog()
@@ -904,17 +965,17 @@ function ExpenseFormModal({
   }
 
   return (
-    <Modal description="Registra un egreso o un ingreso. Las opciones nuevas quedarán disponibles para las próximas campañas." onClose={onClose} title="Registrar gasto o ingreso">
+    <Modal description={expense ? "Actualiza los datos del movimiento registrado." : "Registra un egreso o un ingreso. Las opciones nuevas quedarán disponibles para las próximas campañas."} onClose={onClose} title={expense ? "Editar gasto o ingreso" : "Registrar gasto o ingreso"}>
       <form className="modal-body stack-form" onSubmit={submit}>
-        <label>Fecha<input defaultValue={todayISO()} max={todayISO()} min={campaign.fechaInicio} name="fecha" required type="date" /></label>
+        <label>Fecha<input defaultValue={expense?.fecha ?? todayISO()} max={todayISO()} min={campaign.fechaInicio} name="fecha" required type="date" /></label>
         <div className="two-columns">
-          <label>Tipo<input list="expense-types" name="tipo" placeholder="Ej. COMIDA" required /></label>
-          <label>Descripción<input list="expense-descriptions" name="descripcion" placeholder="Ej. POLLOS" required /></label>
+          <label>Tipo<input defaultValue={expense?.tipo} list="expense-types" name="tipo" placeholder="Ej. COMIDA" required /></label>
+          <label>Descripción<input defaultValue={expense?.descripcion} list="expense-descriptions" name="descripcion" placeholder="Ej. POLLOS" required /></label>
         </div>
         <datalist id="expense-types">{catalog.tipos.map((item) => <option key={item} value={item} />)}</datalist>
         <datalist id="expense-descriptions">{catalog.descripciones.map((item) => <option key={item} value={item} />)}</datalist>
-        <label>Observación<textarea name="observacion" placeholder="Detalle del movimiento" required rows={3} /></label>
-        <label>Forma de pago<input list="expense-payment-methods" name="formaPago" placeholder="Ej. EFECTIVO" required /></label>
+        <label>Observación<textarea defaultValue={expense?.observacion} name="observacion" placeholder="Detalle del movimiento" required rows={3} /></label>
+        <label>Forma de pago<input defaultValue={expense?.formaPago} list="expense-payment-methods" name="formaPago" placeholder="Ej. EFECTIVO" required /></label>
         <datalist id="expense-payment-methods">{catalog.formasPago.map((item) => <option key={item} value={item} />)}</datalist>
         <fieldset className="bank-options"><legend>Banco</legend><p>Selecciona uno o ambos bancos.</p>
           {(["BCP", "INTERBANK"] as const).map((bank) => <label className="check-option" key={bank}><input checked={bancos.includes(bank)} onChange={() => toggleBank(bank)} type="checkbox" />{bank}</label>)}
@@ -925,7 +986,7 @@ function ExpenseFormModal({
         </div>
         {catalogError ? <p className="form-message" role="alert">{catalogError}</p> : null}
         {error ? <p className="form-message" role="alert">{error}</p> : null}
-        <div className="form-actions"><button className="button button-secondary" disabled={busy} onClick={onClose} type="button">Cancelar</button><button className="button button-primary" disabled={busy} type="submit">{busy ? "Guardando…" : "Guardar movimiento"}</button></div>
+        <div className="form-actions"><button className="button button-secondary" disabled={busy} onClick={onClose} type="button">Cancelar</button><button className="button button-primary" disabled={busy} type="submit">{busy ? "Guardando…" : expense ? "Guardar cambios" : "Guardar movimiento"}</button></div>
       </form>
     </Modal>
   );

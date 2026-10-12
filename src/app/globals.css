@@ -214,6 +214,7 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 }
 
 .action-cell { text-align: right; white-space: nowrap; }
+.action-cell .table-link + .table-link { margin-left: 0.7rem; }
 
 .table-link,
 .text-button {

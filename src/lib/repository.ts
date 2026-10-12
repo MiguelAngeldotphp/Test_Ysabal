@@ -593,14 +593,19 @@ export async function createExpense(campaignId: string, input: ExpenseInput): Pr
   const campaign = await getLiveCampaign(campaignId);
   if (campaign.estado === "finalizada") throw new AppError("No se pueden registrar gastos en una campaña finalizada.");
 
+  const values = await expenseValues(input);
+  const client = configuredClient();
+  const { error } = await client.from("gastos_campana").insert({ campana_id: campaignId, ...values });
+  if (error) throw new AppError(databaseMessage(error), 500);
+}
+
+async function expenseValues(input: ExpenseInput) {
   const [tipoGastoId, descripcionGastoId, formaPagoId] = await Promise.all([
     getOrCreateCatalogValue("tipos_gasto", input.tipo),
     getOrCreateCatalogValue("descripciones_gasto", input.descripcion),
     getOrCreateCatalogValue("formas_pago_gasto", input.formaPago),
   ]);
-  const client = configuredClient();
-  const { error } = await client.from("gastos_campana").insert({
-    campana_id: campaignId,
+  return {
     fecha: input.fecha,
     tipo_gasto_id: tipoGastoId,
     descripcion_gasto_id: descripcionGastoId,
@@ -609,8 +614,39 @@ export async function createExpense(campaignId: string, input: ExpenseInput): Pr
     bancos: input.bancos,
     egreso: input.egreso ?? null,
     ingreso: input.ingreso ?? null,
-  });
+  };
+}
+
+export async function updateExpense(expenseId: string, campaignId: string, input: ExpenseInput): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado === "finalizada") throw new AppError("No se pueden modificar gastos en una campaña finalizada.");
+
+  const client = configuredClient();
+  const { data, error } = await client
+    .from("gastos_campana")
+    .update(await expenseValues(input))
+    .eq("id", expenseId)
+    .eq("campana_id", campaignId)
+    .select("id")
+    .maybeSingle();
   if (error) throw new AppError(databaseMessage(error), 500);
+  if (!data) throw new AppError("No encontramos el movimiento.", 404);
+}
+
+export async function deleteExpense(expenseId: string, campaignId: string): Promise<void> {
+  const campaign = await getLiveCampaign(campaignId);
+  if (campaign.estado === "finalizada") throw new AppError("No se pueden eliminar gastos en una campaña finalizada.");
+
+  const client = configuredClient();
+  const { data, error } = await client
+    .from("gastos_campana")
+    .delete()
+    .eq("id", expenseId)
+    .eq("campana_id", campaignId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new AppError(databaseMessage(error), 500);
+  if (!data) throw new AppError("No encontramos el movimiento.", 404);
 }
 
 export async function finishSale(campaignId: string, fechaFin: string): Promise<void> {
