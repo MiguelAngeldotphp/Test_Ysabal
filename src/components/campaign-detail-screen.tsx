@@ -933,7 +933,7 @@ function ExpenseFormModal({
 
 function WeightGuideModal({ currentDay, onClose }: { currentDay: number; onClose: () => void }) {
   return (
-    <Modal description="Referencia visual para comparar el crecimiento de las aves." onClose={onClose} title="Guía de peso aproximado">
+    <Modal description="Referencia visual para comparar el crecimiento de las aves." onClose={onClose} size="side" title="Guía de peso aproximado">
       <div className="modal-body">
         <div className="weight-guide">
           <div className="weight-guide-row weight-guide-heading"><span>Edad</span><span>Peso aproximado</span></div>

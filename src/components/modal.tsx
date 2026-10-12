@@ -7,7 +7,7 @@ type ModalProps = {
   description?: string;
   children: ReactNode;
   onClose: () => void;
-  size?: "default" | "wide";
+  size?: "default" | "wide" | "side";
 };
 
 export function Modal({ title, description, children, onClose, size = "default" }: ModalProps) {
