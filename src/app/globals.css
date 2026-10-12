@@ -318,16 +318,18 @@ h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
 .modal-wide { width: min(1100px, 100%); }
 .modal-side {
   position: fixed;
-  inset: 0 0 0 auto;
-  width: min(440px, 100%);
-  max-height: 100dvh;
-  border-radius: 1.1rem 0 0 1.1rem;
+  top: 50%;
+  right: 1.25rem;
+  width: min(560px, calc(100% - 2.5rem));
+  max-height: min(800px, calc(100vh - 2.5rem));
+  border-radius: 1.1rem;
+  transform: translateY(-50%);
   animation: slide-in-from-right 220ms ease-out;
 }
 
 @keyframes slide-in-from-right {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { transform: translate(100%, -50%); }
+  to { transform: translate(0, -50%); }
 }
 
 .modal-header {
@@ -843,7 +845,7 @@ textarea:focus {
   .sale-totals div:nth-child(4) { border-top: 1px solid var(--line); }
   .modal-backdrop { padding: 0.6rem; }
   .modal { max-height: calc(100vh - 1.2rem); }
-  .modal-side { max-height: 100dvh; border-radius: 0; }
+  .modal-side { right: 0.6rem; width: calc(100% - 1.2rem); max-height: calc(100vh - 1.2rem); border-radius: 1.1rem; }
 }
 
 @media (max-width: 520px) {
